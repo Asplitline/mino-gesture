@@ -128,6 +128,35 @@ src-tauri/
 - [PRD](./docs/PRD.md)
 - [Technical Design](./docs/TECH_DESIGN.md)
 
+## Development
+
+Use `pnpm` as the package manager.
+
+### Prerequisites (macOS)
+
+```bash
+# Rust toolchain (provides cargo)
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Tauri native dependencies
+xcode-select --install
+```
+
+After installation, restart terminal and confirm:
+
+```bash
+cargo --version
+pnpm --version
+```
+
+### Commands
+
+```bash
+pnpm install
+pnpm build
+pnpm tauri dev
+```
+
 ## Status
 
-Project planning and initialization.
+Milestone 1 foundation scaffold is in place.
