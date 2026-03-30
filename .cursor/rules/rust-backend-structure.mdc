@@ -1,0 +1,48 @@
+---
+description: Rust 后端分层与文件职责：从入口到命令与业务模块的阅读地图
+globs: src-tauri/**/*.rs
+alwaysApply: false
+---
+
+# Rust 后端结构（mino-gesture）
+
+## 物理目录（Cargo 子模块目录）
+
+- **`config.rs`**（crate 根）：`ConfigStore`、TOML 读写；规则数据结构 `RuleConfig`。
+- **`core/`**：`state`（`AppState`）、`execution`（归一化 / 校验 / `apply_gesture_match`）、`execution_result`（`ExecutionResult`，避免与 `execution` 循环依赖）。
+- **`domain/`**：`gesture`、`rules`、`actions` — 纯领域逻辑，尽量不依赖 Tauri。
+- **`platform/`**：`input`、`mouse_listener`、`tray` — 系统与全局事件边界。
+- **`commands/`**：`#[tauri::command]`、IPC DTO；薄编排。
+- **`lib.rs`**：仅 `mod` 树、`run()`、`setup`、注册 `invoke_handler`。
+
+顶层目录约定与 Cargo 官方布局的关系见 **`rust-project-layout.mdc`**。
+
+## 阅读顺序（新人上手）
+
+1. **`lib.rs`**
+2. **`core/state` → `core/execution_result` → `core/execution`**
+3. **`domain/*`**
+4. **`commands`**
+5. **`platform/*`**、`config.rs`
+
+## 新增功能时放哪里
+
+| 场景 | 放置 |
+|------|------|
+| 新手势识别/轨迹 | `domain/gesture.rs` |
+| 规则匹配、scope 策略 | `domain/rules.rs` |
+| 新动作类型 | `domain/actions.rs` |
+| 配置字段、读写 | `config.rs`（或增大后 `config/` 目录） |
+| 新手势匹配与执行编排 | `core/execution.rs` |
+| 新的 `invoke` API | `commands/`（单文件膨胀时再拆 `commands/*.rs`） |
+| 全局键鼠、托盘、OS 脚本 | `platform/` |
+
+## 依赖约定
+
+- **禁止** `core::state` ↔ `core::execution` 通过类型定义形成环；共享结果类型放在 **`core/execution_result`**。
+- **`domain`** 不 `use` **`platform`** / **`commands`**。
+- **`mouse_listener`** 与 **`commands`** 共用 **`core::execution::apply_gesture_match`**，禁止复制匹配逻辑。
+
+## 与 `tauri-rust-conventions.mdc` 的关系
+
+该文件补充「**文件放在哪、先读什么**」；命令设计、错误处理、权限等仍以 Tauri 专规为准。

@@ -1,0 +1,56 @@
+---
+description: 对标 Cargo 官方与常见实践：仓库分层、Tauri Rust 根目录、workspace 与测试位置
+globs: "**/Cargo.toml,src-tauri/**/*.rs"
+alwaysApply: false
+---
+
+# Rust 项目管理与目录结构（参考「市面主流」= Cargo 官方 + 社区惯例）
+
+权威依据优先 **[The Cargo Book — Project Layout](https://doc.rust-lang.org/cargo/guide/project-layout.html)**，以下为其要点与本仓库的落地方式。
+
+## Cargo 默认约定（单包 crate）
+
+| 路径 | 用途 |
+|------|------|
+| `Cargo.toml` / `Cargo.lock` | 包清单与锁定依赖 |
+| `src/lib.rs` | 库入口（本 Tauri 工程为 `cdylib` + 实际逻辑） |
+| `src/main.rs` | 默认二进制入口（本仓库中仅调用 `lib::run()`） |
+| `src/bin/*.rs` | 额外同名可执行文件（当前未用；将来 CLI 可放此处） |
+| `examples/` | 可运行示例 `cargo run --example ...` |
+| `tests/` | 集成测试（与 `src` 并列） |
+| `benches/` | 基准测试 |
+
+命名：**crate 根目录与多二进制文件**常用 `kebab-case`；**Rust 模块文件**使用 `snake_case`（与 `mod` 名一致）。
+
+## Cargo Workspace（多包单体仓库）
+
+当 Rust 侧出现多个可独立版本发布的子库（例如 `core` 算法库 + `app` 壳）时，在仓库根使用 **虚拟 manifest**（仅 `[workspace]`，无 `[package]`），`members = ["crates/foo", ...]`。**本仓库当前为 Tauri 单包**，前端在仓库根、`src-tauri` 为唯一 Rust 包，**不必**为结构而复用 workspace；若日后拆出共享 crate，再升到 workspace。
+
+## Tauri 与 Cargo 的组合方式
+
+社区与官方脚手架惯例：**Web UI 在仓库根**，**Rust 包在 `src-tauri/`**，内含标准 `src/lib.rs` + `src/main.rs`。本仓库遵循该布局；**不要求**把 `src-tauri` 再改成 workspace 根，除非明确要「根目录多个 Rust member」。
+
+## 本仓库 `src-tauri/src/` 分层（在 Cargo 惯例之上的语义目录）
+
+在官方「`src/` 下按模块分子文件/子目录」基础上，用四层便于项目管理与阅读：
+
+```
+src/
+  lib.rs, main.rs
+  config.rs              # 配置与磁盘读写（持久化模型）
+  commands/              # Tauri invoke 边界（DTO + #[tauri::command]）
+  core/                  # 运行时状态、手势匹配执行链、ExecutionResult
+  domain/                # 领域：gesture / rules / actions（尽量不依赖 Tauri）
+  platform/              # OS 集成：input、全局鼠标监听、托盘
+```
+
+依赖方向建议：**platform / commands → core → domain / config**；避免 `domain` 依赖 `platform` 或 `commands`，以免领域逻辑与 UI/OS 难测、难复用。
+
+## 阅读顺序（给协作者）
+
+`lib.rs`（装配与注册）→ `core/state` → `core/execution*` → `domain/*` → `commands` → `platform/*` → `config`。
+
+## 相关规则
+
+- **`rust-backend-structure.mdc`**：更细的模块职责与禁止循环依赖说明。
+- **`tauri-rust-conventions.mdc`**：命令、错误、权限、tracing 等 Tauri 专规。

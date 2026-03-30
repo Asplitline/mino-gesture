@@ -1,5 +1,5 @@
-use crate::gesture::Direction;
 use crate::config::RuleConfig;
+use crate::domain::gesture::Direction;
 
 #[derive(Debug, Clone)]
 pub struct RuleEngine;

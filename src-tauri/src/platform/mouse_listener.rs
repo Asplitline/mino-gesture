@@ -1,5 +1,7 @@
-use crate::gesture::{self, Point};
-use crate::{apply_gesture_match, AppState, ExecutionResult};
+use crate::core::execution::apply_gesture_match;
+use crate::core::execution_result::ExecutionResult;
+use crate::core::state::AppState;
+use crate::domain::gesture::{self, Point};
 use rdev::{Button, EventType};
 use std::process::Command;
 use std::sync::{Arc, Mutex};

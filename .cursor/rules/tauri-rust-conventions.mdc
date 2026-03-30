@@ -6,7 +6,8 @@ alwaysApply: false
 
 # Tauri Rust Conventions
 
-- Rust 核心按职责拆分：`input`、`gesture`、`rules`、`actions`、`config`、`tray`，禁止把业务堆在 `lib.rs`。
+- Rust 核心按目录分层：`lib`（仅入口）、`config`、`core`（state / execution / execution_result）、`domain`（gesture / rules / `actions`）、`platform`（input / mouse_listener / tray）、`commands`；禁止把业务与命令实现堆在 `lib.rs`。
+- Cargo 官方目录约定与 workspace 何时引入见 **`rust-project-layout.mdc`**；模块阅读顺序见 **`rust-backend-structure.mdc`**。
 - `#[tauri::command]` 只做参数校验和编排，不写复杂逻辑；复杂逻辑下沉到对应模块函数。
 - 命令入参与出参保持稳定、可序列化，命名统一 `camelCase`；避免前后端字段风格不一致。
 - 错误处理统一：模块内部优先 `anyhow/thiserror`，命令边界统一转换为可读字符串返回前端。

@@ -1,4 +1,4 @@
-use crate::gesture::Point;
+use crate::domain::gesture::Point;
 
 #[derive(Debug, Default, Clone)]
 pub struct InputEngine {
