@@ -47,3 +47,14 @@ export type RuleConfig = {
   gesture: string;
   actionType: string;
 };
+
+export type ViewRoute = "home" | "panel";
+
+export type TimedGestureResult = GestureResult & { at: number };
+
+export type CreateRuleDraft = {
+  name: string;
+  button: MouseButtonValue;
+  gesture: string;
+  actionType: string;
+};
