@@ -355,8 +355,6 @@ struct ScreenFrame {
 /// 遍历所有显示器，找到包含该坐标的那个，将窗口移到它上面并调整为其尺寸。
 /// 返回目标屏幕的物理像素 frame，用于 trail-start 事件的坐标映射。
 fn show_overlay(app: &AppHandle, cursor_x: f64, cursor_y: f64) -> ScreenFrame {
-    use tauri::PhysicalPosition;
-    use tauri::PhysicalSize;
 
     let fallback = ScreenFrame {
         x: 0.0, y: 0.0, w: 1920.0, h: 1080.0, scale_factor: 2.0,
@@ -412,16 +410,20 @@ fn show_overlay(app: &AppHandle, cursor_x: f64, cursor_y: f64) -> ScreenFrame {
 
     let active_idx = target_idx.unwrap_or(0);
     // (logic_x, logic_y, phys_w, phys_h, scale, phys_x, phys_y, name)
-    let (_, _, active_phys_w, active_phys_h, active_scale, active_phys_x, active_phys_y, _) =
+    let (active_logic_x, active_logic_y, active_phys_w, active_phys_h, active_scale, active_phys_x, active_phys_y, _) =
         screen_infos.get(active_idx).cloned().unwrap_or((0.0, 0.0, 1920.0, 1080.0, 2.0, 0.0, 0.0, None));
+    let active_logic_w = active_phys_w / active_scale;
+    let active_logic_h = active_phys_h / active_scale;
 
-    // 将 overlay 窗口移到目标屏幕（使用物理像素坐标）
-    let _ = win.set_position(PhysicalPosition::new(active_phys_x as i32, active_phys_y as i32));
-    let _ = win.set_size(PhysicalSize::new(active_phys_w as u32, active_phys_h as u32));
+    // 将 overlay 窗口移到目标屏幕
+    // Monitor::position() 返回 macOS 逻辑坐标（points），必须用 LogicalPosition 才能跨屏定位
+    // 用 PhysicalPosition 会被 macOS 当作硬件像素偏移，导致窗口落在错误屏幕
+    let _ = win.set_position(tauri::LogicalPosition::new(active_logic_x, active_logic_y));
+    let _ = win.set_size(tauri::LogicalSize::new(active_logic_w, active_logic_h));
 
     tracing::info!(
-        "[screens] selected #{} phys_pos=({},{}) phys_size={}×{} scale={}",
-        active_idx, active_phys_x, active_phys_y, active_phys_w, active_phys_h, active_scale,
+        "[screens] selected #{} logic_pos=({},{}) logic_size={}×{} scale={}",
+        active_idx, active_logic_x, active_logic_y, active_logic_w, active_logic_h, active_scale,
     );
 
     let _ = win.set_ignore_cursor_events(true);
