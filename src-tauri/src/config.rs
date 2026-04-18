@@ -34,6 +34,26 @@ fn builtin_actions() -> Vec<ActionConfig> {
             shift: false,
             command: false,
         },
+        ActionConfig {
+            id: "hotkey_browser_back".to_string(),
+            name: "Browser Back".to_string(),
+            kind: "hotkey".to_string(),
+            key_code: 33,
+            control: false,
+            option: false,
+            shift: false,
+            command: true,
+        },
+        ActionConfig {
+            id: "hotkey_browser_forward".to_string(),
+            name: "Browser Forward".to_string(),
+            kind: "hotkey".to_string(),
+            key_code: 30,
+            control: false,
+            option: false,
+            shift: false,
+            command: true,
+        },
     ]
 }
 
@@ -65,6 +85,24 @@ fn builtin_rules() -> Vec<RuleConfig> {
             button: "middle".to_string(),
             gesture: "R".to_string(),
             action_type: "hotkey_switch_right".to_string(),
+        },
+        RuleConfig {
+            id: "builtin-browser-back".to_string(),
+            name: "右键左滑 - 网页后退".to_string(),
+            enabled: true,
+            scope: "global".to_string(),
+            button: "right".to_string(),
+            gesture: "L".to_string(),
+            action_type: "hotkey_browser_back".to_string(),
+        },
+        RuleConfig {
+            id: "builtin-browser-forward".to_string(),
+            name: "右键右滑 - 网页前进".to_string(),
+            enabled: true,
+            scope: "global".to_string(),
+            button: "right".to_string(),
+            gesture: "R".to_string(),
+            action_type: "hotkey_browser_forward".to_string(),
         },
     ]
 }
