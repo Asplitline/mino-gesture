@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "A lightweight macOS gesture app"
 authors = ["you"]
 edition = "2024"
+default-run = "mino-gesture"
 
 [lib]
 name = "mino_gesture_lib"
@@ -21,5 +22,8 @@ thiserror = "2"
 toml = "0.8"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter"] }
-# 使用 git 版本修复 macOS 键盘崩溃问题 (Issue #165, #146)
+# 使用 git 版本修复 macOS 键盘崩溃问题，并通过本地 patch 修复中键 (OtherMouseDown/Up) 缺失
 rdev = { git = "https://github.com/Narsil/rdev.git", rev = "c77b4e5456301cfa7f2226020f2a58f2f8d77c5d" }
+
+[patch."https://github.com/Narsil/rdev.git"]
+rdev = { path = "../vendor/rdev" }
