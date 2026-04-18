@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   BUTTON_OPTIONS,
   formatGestureSelectOption,
@@ -8,6 +9,7 @@ import {
 } from "../../gesture";
 import { hotkeySnapshotToKeyLabels } from "../../lib/macKeyboard";
 import type { MouseButtonValue } from "../../types/app";
+import { GestureLogOverlay, IconScrollText } from "../../components/GestureLogOverlay";
 import { GestureRuleCard } from "../../components/GestureRuleCard";
 import { KeybindingRecorder } from "../../components/KeybindingRecorder";
 import { ResultSection } from "../../components/ResultSection";
@@ -24,6 +26,8 @@ type PanelPageProps = {
 };
 
 export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
+  const [logOverlayOpen, setLogOverlayOpen] = useState(false);
+
   const {
     ruleFormOpen,
     editingRuleId,
@@ -33,6 +37,7 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
     submitRuleForm,
     formBusy,
     lastResult,
+    gestureLog,
     screens,
     activeScreenIndex,
     rules,
@@ -55,6 +60,21 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 bg-background/80 px-3 py-3 sm:px-4 dark:border-border/50 dark:bg-background/70">
           <h1 className="min-w-0 text-lg font-semibold tracking-tight text-foreground">Gestures</h1>
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="relative h-9 w-9 shrink-0 p-0"
+              onClick={() => setLogOverlayOpen(true)}
+              aria-label={`查看识别日志，${gestureLog.length} 条`}
+              aria-haspopup="dialog"
+              aria-expanded={logOverlayOpen}
+            >
+              <IconScrollText className="h-4 w-4 text-muted-foreground" />
+              <span className="absolute -right-1.5 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground shadow-sm">
+                {gestureLog.length > 999 ? "999+" : gestureLog.length}
+              </span>
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -87,6 +107,8 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
             </Button>
           </div>
         </header>
+
+        <GestureLogOverlay open={logOverlayOpen} onOpenChange={setLogOverlayOpen} entries={gestureLog} />
 
         {ruleFormOpen && (
           <>

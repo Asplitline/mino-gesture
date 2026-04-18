@@ -136,7 +136,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     const unlistenResult = listen<GestureResult>("gesture-result", (e) => {
       const r = e.payload;
       setLastResult(r);
-      if (r.gesture) setHistory((prev) => [{ ...r, at: Date.now() }, ...prev].slice(0, 20));
+      if (r.gesture) setHistory((prev) => [{ ...r, at: Date.now() }, ...prev].slice(0, 500));
     });
 
     return () => {
@@ -305,6 +305,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     submitRuleForm,
     formBusy,
     lastResult,
+    gestureLog: history,
     screens,
     activeScreenIndex,
     rules,
