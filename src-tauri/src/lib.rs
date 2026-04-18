@@ -24,7 +24,34 @@ fn app_config_dir(handle: &tauri::AppHandle) -> anyhow::Result<PathBuf> {
 }
 
 pub fn run() {
-    tracing_subscriber::fmt().with_env_filter("info").init();
+    // 日志文件路径
+    let log_dir = std::env::temp_dir().join("mino-gesture");
+    let _ = std::fs::create_dir_all(&log_dir);
+    
+    tracing_subscriber::fmt()
+        .with_env_filter("info")
+        .init();
+    
+    tracing::info!("mino-gesture starting");
+    tracing::info!("log directory: {:?}", log_dir);
+    
+    // 设置 panic hook 写入崩溃日志
+    let crash_log = log_dir.join("crash.log");
+    let crash_log_clone = crash_log.clone();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        use std::io::Write;
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let msg = format!("[timestamp:{}] PANIC: {:?}\n", timestamp, panic_info);
+        let _ = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&crash_log_clone)
+            .and_then(|mut f| f.write_all(msg.as_bytes()));
+        eprintln!("{}", msg);
+    }));
 
     tauri::Builder::default()
         .setup(|app| {

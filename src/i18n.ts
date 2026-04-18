@@ -11,6 +11,10 @@ export const I18N_MESSAGES: Record<Language, Messages> = {
       "请在 macOS 设置 - 隐私与安全性中为应用开启辅助功能和输入监控权限。",
     "permissions.middleButton":
       "实时手势仅支持鼠标中键：按住中键拖动，松开时识别轨迹并匹配规则（需上述权限）。",
+    "permissions.status": "权限状态",
+    "permissions.granted": "✅ 已授予",
+    "permissions.denied": "❌ 未授予",
+    "permissions.hint": "如果未授予，请在系统设置中添加当前应用（或终端）到辅助功能列表",
     "runtime.title": "运行状态",
     "runtime.enabled": "启用状态",
     "runtime.input": "输入模块",
@@ -49,7 +53,14 @@ export const I18N_MESSAGES: Record<Language, Messages> = {
       "相同判定：去掉首尾空格后转大写，与规则里存的手势字符串完全一致才算同一手势（如 UL 与 LU 不同）。",
     "rules.scopeDefaultNote": "新建规则默认为全局有效（global）。",
     "debug.title": "手势调试",
-    "debug.execute": "执行"
+    "debug.execute": "执行",
+    "tracking.title": "实时追踪",
+    "tracking.waiting": "等待中键操作...",
+    "tracking.pressed": "按下",
+    "tracking.released": "释放",
+    "tracking.recognized": "识别",
+    "tracking.points": "采集点数",
+    "tracking.directions": "方向序列"
   },
   "en-US": {
     "header.subtitle": "Milestone 1 Foundation Console",
@@ -59,6 +70,10 @@ export const I18N_MESSAGES: Record<Language, Messages> = {
       "Please enable Accessibility and Input Monitoring for this app in macOS Settings - Privacy & Security.",
     "permissions.middleButton":
       "Live gestures use the middle mouse button only: hold middle button and drag; on release the path is recognized and matched (requires the permissions above).",
+    "permissions.status": "Permission Status",
+    "permissions.granted": "✅ Granted",
+    "permissions.denied": "❌ Not Granted",
+    "permissions.hint": "If not granted, add this app (or Terminal) to Accessibility in System Settings",
     "runtime.title": "Runtime",
     "runtime.enabled": "Enabled",
     "runtime.input": "Input module",
@@ -97,7 +112,14 @@ export const I18N_MESSAGES: Record<Language, Messages> = {
       "Sameness: trim, uppercase, then exact string match to the rule gesture (UL ≠ LU).",
     "rules.scopeDefaultNote": "New rules default to global scope.",
     "debug.title": "Gesture debug",
-    "debug.execute": "Execute"
+    "debug.execute": "Execute",
+    "tracking.title": "Live Tracking",
+    "tracking.waiting": "Waiting for middle button...",
+    "tracking.pressed": "Pressed",
+    "tracking.released": "Released",
+    "tracking.recognized": "Recognized",
+    "tracking.points": "Points",
+    "tracking.directions": "Directions"
   }
 };
 
