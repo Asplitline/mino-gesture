@@ -1,10 +1,12 @@
-use crate::core::execution::apply_gesture_match;
+use crate::core::execution::{normalize_gesture, normalize_scope};
 use crate::core::execution_result::ExecutionResult;
+use crate::domain::actions::ActionExecutor;
 use crate::core::state::AppState;
 use crate::domain::gesture::{self, Point};
 use crate::platform::macos_input::{listen, MouseButton, RawEvent};
 use serde::Serialize;
 use std::process::Command;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -81,12 +83,17 @@ pub fn spawn_middle_button_listener(app: AppHandle, state: Arc<Mutex<AppState>>)
         let capturing = Arc::new(Mutex::new(false));
         let points = Arc::new(Mutex::new(Vec::<Point>::new()));
         let last_xy = Arc::new(Mutex::new((0.0_f64, 0.0_f64)));
+        // Monotonically increasing counter: incremented each time the middle button
+        // is pressed. The overlay-hide timer captures the value at gesture start and
+        // only hides if no newer gesture has begun by the time the delay expires.
+        let hide_gen: Arc<AtomicU64> = Arc::new(AtomicU64::new(0));
 
         let capturing_c = capturing.clone();
         let points_c = points.clone();
         let last_xy_c = last_xy.clone();
         let state_c = state.clone();
         let app_c = app.clone();
+        let hide_gen_c = hide_gen.clone();
 
         if let Err(e) = listen(move |event| {
             handle_raw_event(
@@ -96,6 +103,7 @@ pub fn spawn_middle_button_listener(app: AppHandle, state: Arc<Mutex<AppState>>)
                 &capturing_c,
                 &points_c,
                 &last_xy_c,
+                &hide_gen_c,
             );
         }) {
             tracing::error!("CGEventTap listen error: {}", e);
@@ -154,6 +162,7 @@ fn handle_raw_event(
     capturing: &Arc<Mutex<bool>>,
     points: &Arc<Mutex<Vec<Point>>>,
     last_xy: &Arc<Mutex<(f64, f64)>>,
+    hide_gen: &Arc<AtomicU64>,
 ) {
     match event {
         RawEvent::MouseMove { x, y } => {
@@ -177,6 +186,10 @@ fn handle_raw_event(
             let _ = app.emit("input-event", &InputEvent::MousePress { button: name });
 
             if button == MouseButton::Middle {
+                // Advance the generation so any pending hide-timer from a previous
+                // gesture will see a mismatch and skip hiding the overlay.
+                hide_gen.fetch_add(1, Ordering::Relaxed);
+
                 if let (Ok(mut cap), Ok(mut pts)) = (capturing.lock(), points.lock()) {
                     *cap = true;
                     pts.clear();
@@ -228,7 +241,15 @@ fn handle_raw_event(
                     .unwrap_or(false);
 
                 if should_process {
-                    process_gesture(app, state, points);
+                    // Move all blocking work (osascript × 2) off the CGEventTap
+                    // callback thread so the event pipeline is never stalled.
+                    let app_c = app.clone();
+                    let state_c = state.clone();
+                    let points_c = points.clone();
+                    let hide_gen_c = hide_gen.clone();
+                    std::thread::spawn(move || {
+                        process_gesture(&app_c, &state_c, &points_c, &hide_gen_c);
+                    });
                 }
             }
         }
@@ -280,6 +301,7 @@ fn process_gesture(
     app: &AppHandle,
     state: &Arc<Mutex<AppState>>,
     points: &Arc<Mutex<Vec<Point>>>,
+    hide_gen: &Arc<AtomicU64>,
 ) {
     let pts = match points.lock() {
         Ok(mut g) => std::mem::take(&mut *g),
@@ -289,8 +311,16 @@ fn process_gesture(
     let trail = downsample(&pts, 150);
     let scope = frontmost_bundle_id().unwrap_or_else(|| "global".to_string());
 
-    let result = match state.lock() {
-        Ok(mut guard) => {
+    // Phase 1: recognize + match rule — hold the state lock only for this fast section.
+    // We deliberately do NOT execute the action while holding the lock.
+    struct MatchOutcome {
+        result: ExecutionResult,
+        /// action_type to execute after releasing the lock (None = no-op).
+        pending_action: Option<String>,
+    }
+
+    let outcome = match state.lock() {
+        Ok(guard) => {
             if !guard.config.value().enabled {
                 tracing::debug!("middle-button gesture ignored: app disabled");
                 return;
@@ -300,39 +330,107 @@ fn process_gesture(
 
             if gesture_str.is_empty() {
                 tracing::debug!("middle-button: no gesture tokens");
-                ExecutionResult {
-                    matched: false,
-                    scope,
-                    gesture: String::new(),
-                    rule_name: None,
-                    action_type: None,
-                    success: false,
-                    message: "no gesture (movement too small)".to_string(),
-                    trigger: Some("middle_button".to_string()),
+                MatchOutcome {
+                    result: ExecutionResult {
+                        matched: false,
+                        scope,
+                        gesture: String::new(),
+                        rule_name: None,
+                        action_type: None,
+                        success: false,
+                        message: "no gesture (movement too small)".to_string(),
+                        trigger: Some("middle_button".to_string()),
+                    },
+                    pending_action: None,
                 }
             } else {
-                let base = apply_gesture_match(&mut guard, &gesture_str, &scope);
-                tracing::info!(
-                    gesture = %gesture_str,
-                    scope = %scope,
-                    matched = base.matched,
-                    "middle-button gesture completed"
-                );
-                ExecutionResult { trigger: Some("middle_button".to_string()), ..base }
+                let gesture = normalize_gesture(&gesture_str);
+                let scope_n = normalize_scope(&scope);
+                let matched = guard
+                    .rules
+                    .match_rule(guard.config.rules(), &scope_n, &gesture)
+                    .cloned();
+                drop(guard);
+
+                match matched {
+                    Some(rule) => {
+                        tracing::info!(
+                            gesture = %gesture,
+                            scope = %scope_n,
+                            rule = %rule.name,
+                            action_type = %rule.action_type,
+                            "middle-button gesture matched"
+                        );
+                        MatchOutcome {
+                            pending_action: Some(rule.action_type.clone()),
+                            result: ExecutionResult {
+                                matched: true,
+                                scope: scope_n,
+                                gesture,
+                                rule_name: Some(rule.name),
+                                action_type: Some(rule.action_type),
+                                success: true,
+                                message: "action executing".to_string(),
+                                trigger: Some("middle_button".to_string()),
+                            },
+                        }
+                    }
+                    None => {
+                        tracing::info!(
+                            gesture = %gesture,
+                            scope = %scope_n,
+                            "middle-button gesture: no matching rule"
+                        );
+                        MatchOutcome {
+                            pending_action: None,
+                            result: ExecutionResult {
+                                matched: false,
+                                scope: scope_n,
+                                gesture,
+                                rule_name: None,
+                                action_type: None,
+                                success: false,
+                                message: "no matching rule".to_string(),
+                                trigger: Some("middle_button".to_string()),
+                            },
+                        }
+                    }
+                }
             }
         }
         Err(_) => return,
     };
+    // State lock is released here.
 
-    if let Err(e) = app.emit("gesture-result", &GestureResultWithTrail { result, trail }) {
+    // Phase 2: emit gesture-result FIRST so the frontend renders the trail
+    // before the action fires (Mission Control / Space switch animation).
+    if let Err(e) = app.emit("gesture-result", &GestureResultWithTrail {
+        result: outcome.result,
+        trail,
+    }) {
         tracing::warn!("emit gesture-result failed: {}", e);
     }
 
-    // 延迟 1.3s 后隐藏覆盖窗口（与前端淡出时间匹配）
+    // Phase 3: execute the action (potentially slow osascript call).
+    // Runs in this background thread — the CGEventTap callback already returned.
+    if let Some(action_type) = outcome.pending_action {
+        let executor = ActionExecutor::new();
+        if let Err(e) = executor.execute_action_type(&action_type) {
+            tracing::warn!("action execution failed ({}): {}", action_type, e);
+        }
+    }
+
+    // Schedule overlay hide after the frontend fade-out animation completes.
+    // Capture the current generation: if the user starts a new gesture before
+    // this timer fires, the generation will have advanced and we skip the hide.
+    let expected_gen = hide_gen.load(Ordering::Relaxed);
     let app_hide = app.clone();
+    let hide_gen_timer = hide_gen.clone();
     std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_millis(1300));
-        hide_overlay(&app_hide);
+        std::thread::sleep(std::time::Duration::from_millis(700));
+        if hide_gen_timer.load(Ordering::Relaxed) == expected_gen {
+            hide_overlay(&app_hide);
+        }
     });
 }
 

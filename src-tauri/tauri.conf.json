@@ -35,7 +35,8 @@
         "focus": false,
         "resizable": false,
         "acceptFirstMouse": true,
-        "contentProtected": false
+        "contentProtected": false,
+        "visibleOnAllWorkspaces": true
       }
     ],
     "security": {

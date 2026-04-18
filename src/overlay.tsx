@@ -50,6 +50,7 @@ function parseArrows(gesture: string): string {
 function Overlay() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [label, setLabel] = useState<{ text: string; x: number; y: number; matched: boolean } | null>(null);
+  const [labelFading, setLabelFading] = useState(false);
   const [capturing, setCapturing] = useState(false);
   // 当前屏幕信息，由 trail-start 事件同步写入（避免异步 outerPosition 偏差）
   const screenRef = useRef<Pick<TrailStart, "screenX" | "screenY" | "scaleFactor">>({
@@ -202,6 +203,7 @@ function Overlay() {
       setCapturing(true);
       trailRef.current = [{ x, y }];
       setLabel(null);
+      setLabelFading(false);
       drawTrail(trailRef.current, true);
     });
 
@@ -230,16 +232,18 @@ function Overlay() {
         });
       }
 
-      // 1.2s 后清除
+      // 400ms 后开始淡出，600ms 后彻底清除
+      labelTimerRef.current = setTimeout(() => setLabelFading(true), 400);
       labelTimerRef.current = setTimeout(() => {
         setLabel(null);
+        setLabelFading(false);
         trailRef.current = [];
         const canvas = canvasRef.current;
         if (canvas) {
           const ctx = canvas.getContext("2d");
           ctx?.clearRect(0, 0, canvas.width, canvas.height);
         }
-      }, 1200);
+      }, 600);
     });
 
     return () => {
@@ -272,20 +276,22 @@ function Overlay() {
         <div
           style={{
             position: "absolute",
-            left: label.x + 14,
-            top: label.y - 28,
+            left: label.x + 12,
+            top: label.y - 24,
             pointerEvents: "none",
             background: label.matched
-              ? "rgba(34,197,94,0.9)"
-              : "rgba(99,102,241,0.9)",
-            color: "#fff",
-            borderRadius: 8,
-            padding: "3px 10px",
-            fontSize: 18,
-            fontWeight: 700,
+              ? "rgba(34,197,94,0.55)"
+              : "rgba(99,102,241,0.55)",
+            color: "rgba(255,255,255,0.92)",
+            borderRadius: 7,
+            padding: "2px 8px",
+            fontSize: 15,
+            fontWeight: 500,
             letterSpacing: 2,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
             whiteSpace: "nowrap",
+            opacity: labelFading ? 0 : 1,
+            transition: "opacity 200ms ease",
           }}
         >
           {label.text}
