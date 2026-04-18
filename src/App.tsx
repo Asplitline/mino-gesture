@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { HomeView } from "./components/HomeView";
-import { GesturePanel } from "./components/GesturePanel";
+import { HomePage } from "./pages/home/HomePage";
+import { PanelPage } from "./pages/panel/PanelPage";
 import { readRouteState } from "./lib/appRoute";
 
 export function App() {
@@ -20,7 +20,7 @@ export function App() {
 
   if (route === "home") {
     return (
-      <HomeView
+      <HomePage
         onOpenPanel={() => {
           window.history.pushState({}, "", "/panel");
           setRouteState(readRouteState());
@@ -33,5 +33,5 @@ export function App() {
     );
   }
 
-  return <GesturePanel routeSearch={routeState.search} onIntentHandled={handleIntentHandled} />;
+  return <PanelPage routeSearch={routeState.search} onIntentHandled={handleIntentHandled} />;
 }

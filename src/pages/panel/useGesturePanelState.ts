@@ -1,17 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { formatGestureTriggerLabel, formatHotkey } from "../gesture";
 import type {
   ActionConfig,
   CreateRuleDraft,
   GestureResult,
-  MouseButtonValue,
   RuleConfig,
   ScreenInfo,
   TimedGestureResult,
   TrailStartPayload,
-} from "../types/app";
+} from "../../types/app";
 
 type UseGesturePanelStateOptions = {
   routeSearch: string;
@@ -19,11 +17,10 @@ type UseGesturePanelStateOptions = {
 };
 
 export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGesturePanelStateOptions) {
-  const [isListening, setIsListening] = useState(false);
   const handledIntentRef = useRef<string>("");
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [advancedView, setAdvancedView] = useState(false);
-  const [showCreatePopover, setShowCreatePopover] = useState(false);
+  const [ruleFormOpen, setRuleFormOpen] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [draftEnabled, setDraftEnabled] = useState(true);
 
   const [lastResult, setLastResult] = useState<GestureResult | null>(null);
   const [history, setHistory] = useState<TimedGestureResult[]>([]);
@@ -38,9 +35,6 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
   const [creatingRule, setCreatingRule] = useState(false);
   const [resettingRules, setResettingRules] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [buttonFilter, setButtonFilter] = useState<"all" | MouseButtonValue>("all");
-  const [sortBy, setSortBy] = useState<"usage" | "name" | "gesture">("usage");
   const [draft, setDraft] = useState<CreateRuleDraft>({
     name: "新规则",
     button: "middle",
@@ -66,6 +60,35 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     return counts;
   }, [history]);
 
+  const closeRuleForm = useCallback(() => {
+    setRuleFormOpen(false);
+    setEditingRuleId(null);
+  }, []);
+
+  const openRuleFormCreate = useCallback(() => {
+    setEditingRuleId(null);
+    setDraft({
+      name: "新规则",
+      button: "middle",
+      gesture: "U",
+      actionType: actions[0]?.id ?? "",
+    });
+    setDraftEnabled(true);
+    setRuleFormOpen(true);
+  }, [actions]);
+
+  const openRuleFormEdit = useCallback((rule: RuleConfig) => {
+    setEditingRuleId(rule.id);
+    setDraft({
+      name: rule.name,
+      button: rule.button,
+      gesture: rule.gesture,
+      actionType: rule.actionType,
+    });
+    setDraftEnabled(rule.enabled);
+    setRuleFormOpen(true);
+  }, []);
+
   const refreshRulesAndActions = useCallback(async () => {
     setRulesLoading(true);
     setRulesError(null);
@@ -85,7 +108,6 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
   }, []);
 
   useEffect(() => {
-    setIsListening(true);
     void refreshRulesAndActions();
 
     const unlistenStart = listen<TrailStartPayload>("trail-start", (e) => {
@@ -103,7 +125,6 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     });
 
     return () => {
-      setIsListening(false);
       unlistenStart.then((fn) => fn());
       unlistenResult.then((fn) => fn());
     };
@@ -133,6 +154,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
       );
     } catch (err) {
       setRulesError(String(err));
+      throw err;
     } finally {
       setSavingRuleId(null);
     }
@@ -144,6 +166,13 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     try {
       await invoke("delete_rule", { payload: { id } });
       setRules((prev) => prev.filter((r) => r.id !== id));
+      setEditingRuleId((current) => {
+        if (current === id) {
+          setRuleFormOpen(false);
+          return null;
+        }
+        return current;
+      });
     } catch (err) {
       setRulesError(String(err));
     } finally {
@@ -177,15 +206,34 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
           },
         });
         setRules((prev) => [created, ...prev]);
-        setShowCreatePopover(false);
+        closeRuleForm();
       } catch (err) {
         setRulesError(String(err));
+        throw err;
       } finally {
         setCreatingRule(false);
       }
     },
-    [actions, draft.actionType, draft.button, draft.gesture, draft.name],
+    [actions, draft.actionType, draft.button, draft.gesture, draft.name, closeRuleForm],
   );
+
+  const submitRuleForm = useCallback(async () => {
+    if (editingRuleId) {
+      const base = rules.find((r) => r.id === editingRuleId);
+      if (!base) return;
+      await saveRule({
+        ...base,
+        name: draft.name.trim() || base.name,
+        button: draft.button,
+        gesture: draft.gesture.toUpperCase(),
+        actionType: draft.actionType,
+        enabled: draftEnabled,
+      });
+      closeRuleForm();
+      return;
+    }
+    await createRule();
+  }, [editingRuleId, rules, draft, draftEnabled, saveRule, createRule, closeRuleForm]);
 
   const resetRules = useCallback(async () => {
     setResettingRules(true);
@@ -214,54 +262,25 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
   }, [shouldAutoCreateRule, rulesLoading, creatingRule, actions.length, routeSearch, createRule, onIntentHandled]);
 
   const filteredRules = useMemo(() => {
-    let list = rules;
-    if (buttonFilter !== "all") list = list.filter((r) => r.button === buttonFilter);
-
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      list = list.filter((rule) => {
-        const action = actionById[rule.actionType];
-        const hotkey = action ? formatHotkey(action) : "";
-        const trigger = formatGestureTriggerLabel(rule.gesture);
-        const hay = [
-          rule.name,
-          action?.name ?? "",
-          hotkey,
-          trigger,
-          rule.gesture,
-          rule.button,
-          rule.enabled ? "active" : "disabled",
-        ]
-          .join(" ")
-          .toLowerCase();
-        return hay.includes(q);
-      });
-    }
-
-    const sorted = [...list];
-    if (sortBy === "usage") {
-      sorted.sort(
-        (a, b) => (usageByActionId[b.actionType] ?? 0) - (usageByActionId[a.actionType] ?? 0),
-      );
-    } else if (sortBy === "name") {
-      sorted.sort((a, b) => {
-        const na = actionById[a.actionType]?.name ?? a.name;
-        const nb = actionById[b.actionType]?.name ?? b.name;
-        return na.localeCompare(nb, undefined, { sensitivity: "base" });
-      });
-    } else {
-      sorted.sort((a, b) => a.gesture.localeCompare(b.gesture));
-    }
+    const sorted = [...rules];
+    sorted.sort(
+      (a, b) => (usageByActionId[b.actionType] ?? 0) - (usageByActionId[a.actionType] ?? 0),
+    );
     return sorted;
-  }, [rules, buttonFilter, searchQuery, sortBy, actionById, usageByActionId]);
+  }, [rules, usageByActionId]);
+
+  const formBusy = creatingRule || (editingRuleId !== null && savingRuleId === editingRuleId);
 
   return {
-    isListening,
-    searchInputRef,
-    advancedView,
-    setAdvancedView,
-    showCreatePopover,
-    setShowCreatePopover,
+    ruleFormOpen,
+    editingRuleId,
+    draftEnabled,
+    setDraftEnabled,
+    openRuleFormCreate,
+    openRuleFormEdit,
+    closeRuleForm,
+    submitRuleForm,
+    formBusy,
     lastResult,
     screens,
     activeScreenIndex,
@@ -272,12 +291,6 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     savingRuleId,
     creatingRule,
     resettingRules,
-    searchQuery,
-    setSearchQuery,
-    buttonFilter,
-    setButtonFilter,
-    sortBy,
-    setSortBy,
     draft,
     setDraft,
     actionById,

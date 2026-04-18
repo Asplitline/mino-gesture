@@ -1,11 +1,11 @@
-import { Button } from "./ui/button";
+import { Button } from "../../components/ui/button";
 
-type HomeViewProps = {
+type HomePageProps = {
   onOpenPanel: () => void;
   onOpenPanelCreate: () => void;
 };
 
-export function HomeView({ onOpenPanel, onOpenPanelCreate }: HomeViewProps) {
+export function HomePage({ onOpenPanel, onOpenPanelCreate }: HomePageProps) {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#f5f2fa] to-[#eef3ff] px-6 py-10 dark:from-zinc-950 dark:to-zinc-900">
       <div className="mx-auto flex min-h-[80vh] w-full max-w-[720px] flex-col items-center justify-center gap-8 text-center">
