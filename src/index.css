@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -51,9 +53,8 @@
     margin: 0;
     color: var(--text-primary);
     font-family:
+      "Noto Sans SC",
       "Inter",
-      "SF Pro Display",
-      "Geist",
       "PingFang SC",
       "Source Han Sans SC",
       "HarmonyOS Sans SC",
@@ -109,13 +110,267 @@
   }
 
   .soft-home-banner-image {
-    @apply object-cover;
+    @apply block w-full rounded-[22px] object-cover;
   }
 
   .soft-home-stack {
     position: relative;
     z-index: 1;
-    @apply mx-auto flex w-full max-w-5xl flex-col items-center text-center;
+    width: 720px;
+    max-width: 100%;
+    @apply mx-auto flex flex-col items-center text-center;
+  }
+
+  .soft-config-shell {
+    @apply min-h-screen p-0;
+  }
+
+  .soft-config-frame {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(247, 248, 255, 0.95) 0%, rgba(240, 243, 255, 0.9) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 12px 30px rgba(100, 110, 160, 0.1);
+    @apply relative h-screen w-full overflow-hidden;
+  }
+
+  .soft-config-topbar {
+    border-bottom: 1px solid rgba(120, 130, 160, 0.16);
+    background: rgba(255, 255, 255, 0.55);
+    @apply flex items-center justify-between px-4 py-2.5;
+  }
+
+  .soft-config-tabs {
+    @apply flex items-center gap-1;
+  }
+
+  .soft-tab {
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    @apply px-3 py-1.5 text-sm font-semibold transition-all;
+  }
+
+  .soft-tab-active {
+    border-color: rgba(120, 130, 160, 0.16);
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--text-primary);
+  }
+
+  .soft-home-link {
+    color: var(--text-secondary);
+    @apply text-xs font-semibold transition-colors hover:text-[var(--text-primary)];
+  }
+
+  .soft-record-icon-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(111, 99, 246, 0.25);
+    border-radius: 999px;
+    color: #fff;
+    background: linear-gradient(180deg, #7c70ff 0%, #675cf2 100%);
+    box-shadow: 0 6px 14px rgba(111, 99, 246, 0.28);
+    @apply inline-flex items-center justify-center text-base font-semibold transition-all;
+  }
+
+  .soft-record-icon-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .soft-record-icon-btn:disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  .soft-listen-switch {
+    width: 40px;
+    height: 24px;
+    border-radius: 999px;
+    background: rgba(120, 130, 160, 0.26);
+    @apply relative inline-block transition-colors;
+  }
+
+  .soft-listen-switch > span {
+    width: 18px;
+    height: 18px;
+    top: 3px;
+    left: 3px;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(60, 65, 95, 0.24);
+    @apply absolute transition-all;
+  }
+
+  .soft-listen-switch-on {
+    background: rgba(116, 215, 188, 0.85);
+  }
+
+  .soft-listen-switch-on > span {
+    left: 19px;
+  }
+
+  .soft-config-main {
+    @apply space-y-7 p-4;
+  }
+
+  .soft-create-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: transparent;
+    border: none;
+    @apply block h-full w-full p-0;
+  }
+
+  .soft-create-popover {
+    position: absolute;
+    top: 50px;
+    right: 12px;
+    z-index: 30;
+    width: min(420px, calc(100% - 24px));
+    border: 1px solid rgba(120, 130, 160, 0.2);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(244, 248, 255, 0.95) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.88),
+      0 16px 30px rgba(90, 102, 150, 0.18);
+    backdrop-filter: blur(12px);
+    @apply space-y-3 p-3;
+  }
+
+  .soft-create-grid {
+    @apply grid grid-cols-2 gap-3;
+  }
+
+  .soft-create-field {
+    color: var(--text-secondary);
+    @apply flex flex-col gap-1 text-xs font-semibold;
+  }
+
+  .soft-create-actions {
+    @apply flex items-center justify-end gap-2;
+  }
+
+  .soft-section-head {
+    @apply mb-3 flex items-center justify-between;
+  }
+
+  .soft-config-title {
+    color: var(--text-primary);
+    @apply text-[32px] font-bold leading-[1.2];
+  }
+
+  .soft-advanced-btn {
+    color: var(--text-secondary);
+    @apply inline-flex items-center gap-1 text-xs font-semibold;
+  }
+
+  .soft-help-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    border: 1px solid rgba(120, 130, 160, 0.28);
+    background: rgba(255, 255, 255, 0.78);
+    @apply inline-flex items-center justify-center text-[11px] leading-none;
+  }
+
+  .soft-gesture-grid {
+    @apply grid grid-cols-3 gap-3;
+  }
+
+  .soft-gesture-card {
+    border: 1px solid rgba(120, 130, 160, 0.16);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.82);
+    box-shadow: 0 6px 18px rgba(110, 116, 150, 0.08);
+    @apply space-y-2 p-3;
+  }
+
+  .soft-gesture-shortcut {
+    border: 1px solid rgba(120, 130, 160, 0.16);
+    border-radius: 10px;
+    background: rgba(244, 246, 255, 0.88);
+    color: var(--text-primary);
+    @apply px-2 py-1 text-center text-[15px] font-bold;
+  }
+
+  .soft-gesture-name {
+    color: var(--text-primary);
+    @apply truncate text-center text-[13px] font-semibold;
+  }
+
+  .soft-gesture-meta {
+    border: 1px solid rgba(120, 130, 160, 0.14);
+    border-radius: 10px;
+    background: rgba(245, 247, 255, 0.85);
+    color: var(--text-secondary);
+    @apply flex items-center justify-between gap-2 px-2 py-1 text-xs font-medium;
+  }
+
+  .soft-config-chip-row {
+    @apply mt-3 flex gap-2;
+  }
+
+  .soft-config-chip {
+    border: 1px solid rgba(120, 130, 160, 0.18);
+    border-radius: 10px;
+    background: rgba(245, 247, 255, 0.8);
+    color: var(--text-secondary);
+    @apply px-3 py-1 text-[13px] font-semibold;
+  }
+
+  .soft-history-list {
+    border: 1px solid rgba(120, 130, 160, 0.16);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 8px 20px rgba(100, 110, 160, 0.08);
+    @apply overflow-hidden;
+  }
+
+  .soft-history-row {
+    border-top: 1px solid rgba(120, 130, 160, 0.1);
+    @apply flex items-center justify-between gap-4 px-4 py-3;
+  }
+
+  .soft-history-row:first-child {
+    border-top: none;
+  }
+
+  .soft-history-main {
+    @apply flex min-w-0 items-center gap-2;
+  }
+
+  .soft-history-arrow {
+    color: var(--text-primary);
+    @apply text-lg font-bold;
+  }
+
+  .soft-history-gesture {
+    color: var(--text-primary);
+    @apply truncate text-[16px] font-semibold;
+  }
+
+  .soft-history-action {
+    color: var(--text-secondary);
+    @apply truncate text-sm;
+  }
+
+  .soft-history-side {
+    color: var(--text-secondary);
+    @apply flex shrink-0 items-center gap-2 text-sm font-semibold;
+  }
+
+  .soft-config-muted {
+    color: var(--text-secondary);
+    @apply text-sm;
+  }
+
+  .soft-config-error {
+    border: 1px solid rgba(242, 156, 141, 0.45);
+    border-radius: 12px;
+    background: rgba(242, 156, 141, 0.14);
+    color: #9b4a3f;
+    @apply px-3 py-2 text-sm;
   }
 
   .soft-page-shell {

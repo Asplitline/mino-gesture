@@ -28,7 +28,15 @@ type TrailStart = {
 type GestureResult = {
   gesture: string;
   matched: boolean;
+  ruleName?: string;
+  actionType?: string;
   trail?: TrailPoint[];
+};
+type OverlayHistoryItem = {
+  gesture: string;
+  arrows: string;
+  matched: boolean;
+  at: number;
 };
 
 const DIRECTION_ARROW: Record<string, string> = {
@@ -52,6 +60,7 @@ function Overlay() {
   const [label, setLabel] = useState<{ text: string; x: number; y: number; matched: boolean } | null>(null);
   const [labelFading, setLabelFading] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [historyItems, setHistoryItems] = useState<OverlayHistoryItem[]>([]);
   // 当前屏幕信息，由 trail-start 事件同步写入（避免异步 outerPosition 偏差）
   const screenRef = useRef<Pick<TrailStart, "screenX" | "screenY" | "scaleFactor">>({
     screenX: 0,
@@ -220,12 +229,16 @@ function Overlay() {
       const pts = r.trail && r.trail.length > 0 ? r.trail : trailRef.current;
       trailRef.current = pts;
       drawTrail(pts, false);
+      const arrowsText = parseArrows(r.gesture);
+      setHistoryItems((prev) =>
+        [{ gesture: r.gesture, arrows: arrowsText, matched: r.matched, at: Date.now() }, ...prev].slice(0, 3),
+      );
 
       if (r.gesture && pts.length > 0) {
         const last = pts[pts.length - 1];
         const pos = screenToCanvas(last);
         setLabel({
-          text: parseArrows(r.gesture),
+          text: arrowsText,
           x: pos.x,
           y: pos.y,
           matched: r.matched,
@@ -255,6 +268,13 @@ function Overlay() {
   }, []);
 
   const vignetteTransition = "opacity 0.15s ease";
+  const formatRelativeTime = (ts: number) => {
+    const delta = Math.max(0, Date.now() - ts);
+    if (delta < 45_000) return "Just now";
+    const mins = Math.floor(delta / 60_000);
+    if (mins < 60) return `${mins}m ago`;
+    return `${Math.floor(mins / 60)}h ago`;
+  };
 
   return (
     <div style={{ position: "fixed", inset: 0, pointerEvents: "none" }}>
@@ -295,6 +315,48 @@ function Overlay() {
           }}
         >
           {label.text}
+        </div>
+      )}
+      {historyItems.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            right: 16,
+            top: 16,
+            minWidth: 260,
+            maxWidth: 320,
+            pointerEvents: "none",
+            borderRadius: 14,
+            border: "1px solid rgba(255,255,255,0.28)",
+            background: "linear-gradient(180deg, rgba(25,29,46,0.72) 0%, rgba(20,23,36,0.58) 100%)",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.24)",
+            backdropFilter: "blur(10px)",
+            color: "rgba(240,244,255,0.95)",
+            padding: "10px 10px 8px",
+          }}
+        >
+          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.3, opacity: 0.88, marginBottom: 6 }}>History</div>
+          {historyItems.map((item, idx) => (
+            <div
+              key={`${item.gesture}-${item.at}-${idx}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                padding: "6px 8px",
+                borderRadius: 10,
+                background: idx === 0 ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
+                marginBottom: idx === historyItems.length - 1 ? 0 : 6,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <span style={{ fontSize: 14, letterSpacing: 1 }}>{item.arrows}</span>
+                <span style={{ fontSize: 12, opacity: 0.85 }}>{item.gesture}</span>
+              </div>
+              <div style={{ fontSize: 11, opacity: 0.7, whiteSpace: "nowrap" }}>{formatRelativeTime(item.at)}</div>
+            </div>
+          ))}
         </div>
       )}
     </div>
