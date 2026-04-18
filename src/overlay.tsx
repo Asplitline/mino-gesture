@@ -1,9 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 
 type TrailPoint = { x: number; y: number };
+
+type ScreenInfo = {
+  name: string | null;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  scaleFactor: number;
+};
+
+type TrailStart = {
+  x: number;
+  y: number;
+  screenX: number;
+  screenY: number;
+  screenW: number;
+  screenH: number;
+  scaleFactor: number;
+  screens: ScreenInfo[];
+  activeScreenIndex: number;
+};
 
 type GestureResult = {
   gesture: string;
@@ -30,30 +50,89 @@ function parseArrows(gesture: string): string {
 function Overlay() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [label, setLabel] = useState<{ text: string; x: number; y: number; matched: boolean } | null>(null);
-  // 当前窗口在屏幕上的物理像素偏移
-  const winOffsetRef = useRef({ x: 0, y: 0 });
+  const [capturing, setCapturing] = useState(false);
+  // 当前屏幕信息，由 trail-start 事件同步写入（避免异步 outerPosition 偏差）
+  const screenRef = useRef<Pick<TrailStart, "screenX" | "screenY" | "scaleFactor">>({
+    screenX: 0,
+    screenY: 0,
+    scaleFactor: window.devicePixelRatio || 2,
+  });
+  const screensRef = useRef<ScreenInfo[]>([]);
+  const activeScreenIndexRef = useRef<number>(0);
   const capturingRef = useRef(false);
   const trailRef = useRef<TrailPoint[]>([]);
   const labelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 获取窗口偏移
-  useEffect(() => {
-    const update = async () => {
-      const pos = await getCurrentWindow().outerPosition();
-      winOffsetRef.current = { x: pos.x, y: pos.y };
-    };
-    update();
-    const unlisten = getCurrentWindow().onMoved(() => update());
-    return () => { unlisten.then((fn) => fn()); };
-  }, []);
-
-  // 将屏幕物理像素坐标转为 canvas 逻辑像素
+  // 将 CGEvent 逻辑坐标转为 canvas CSS 像素坐标
+  // macOS CGEvent 使用逻辑像素（points）与 CSS 像素同一空间
+  // screenX/Y 是 Monitor::position() * scale_factor（物理像素），除以 scaleFactor 得逻辑原点
   const screenToCanvas = (p: TrailPoint) => {
-    const dpr = window.devicePixelRatio || 1;
+    const { screenX, screenY, scaleFactor } = screenRef.current;
     return {
-      x: (p.x - winOffsetRef.current.x) / dpr,
-      y: (p.y - winOffsetRef.current.y) / dpr,
+      x: p.x - screenX / scaleFactor,
+      y: p.y - screenY / scaleFactor,
     };
+  };
+
+  // 在 canvas 右上角绘制所有屏幕的缩略图布局
+  const drawScreenMap = (ctx: CanvasRenderingContext2D, canvasW: number, canvasH: number) => {
+    const screens = screensRef.current;
+    if (screens.length <= 1) return;
+
+    // 计算所有屏幕的包围盒（物理像素）
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const s of screens) {
+      minX = Math.min(minX, s.x);
+      minY = Math.min(minY, s.y);
+      maxX = Math.max(maxX, s.x + s.w);
+      maxY = Math.max(maxY, s.y + s.h);
+    }
+    const totalW = maxX - minX;
+    const totalH = maxY - minY;
+
+    // 缩略图区域：右上角，最大 180×120，留 16px 边距
+    const mapMaxW = 180;
+    const mapMaxH = 120;
+    const scale = Math.min(mapMaxW / totalW, mapMaxH / totalH);
+    const mapW = totalW * scale;
+    const mapH = totalH * scale;
+    const marginX = 16;
+    const marginY = 16;
+    const originX = canvasW - mapW - marginX;
+    const originY = marginY;
+
+    // 背景面板
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(originX - 8, originY - 8, mapW + 16, mapH + 16, 8);
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fill();
+
+    const activeIdx = activeScreenIndexRef.current;
+    screens.forEach((s, i) => {
+      const rx = originX + (s.x - minX) * scale;
+      const ry = originY + (s.y - minY) * scale;
+      const rw = s.w * scale;
+      const rh = s.h * scale;
+      const isActive = i === activeIdx;
+
+      ctx.beginPath();
+      ctx.roundRect(rx, ry, rw, rh, 3);
+      ctx.fillStyle = isActive ? "rgba(99,102,241,0.35)" : "rgba(255,255,255,0.08)";
+      ctx.fill();
+      ctx.strokeStyle = isActive ? "rgba(99,102,241,0.9)" : "rgba(255,255,255,0.25)";
+      ctx.lineWidth = isActive ? 1.5 : 1;
+      ctx.stroke();
+
+      // 屏幕编号
+      ctx.fillStyle = isActive ? "rgba(99,102,241,1)" : "rgba(255,255,255,0.45)";
+      ctx.font = `bold ${Math.max(9, rh * 0.28)}px system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(String(i + 1), rx + rw / 2, ry + rh / 2);
+    });
+
+    ctx.restore();
   };
 
   const drawTrail = (pts: TrailPoint[], active: boolean) => {
@@ -103,13 +182,25 @@ function Overlay() {
     ctx.arc(e.x, e.y, active ? 7 : 5, 0, Math.PI * 2);
     ctx.fillStyle = active ? "rgba(236,72,153,0.9)" : "rgba(99,102,241,0.7)";
     ctx.fill();
+
+    // 多屏时右上角显示屏幕布局缩略图
+    drawScreenMap(ctx, w, h);
   };
 
   useEffect(() => {
-    const unlistenStart = listen<TrailPoint>("trail-start", (e) => {
+    const unlistenStart = listen<TrailStart>("trail-start", (e) => {
       if (labelTimerRef.current) clearTimeout(labelTimerRef.current);
+      const { x, y, screenX, screenY, screenW, screenH, scaleFactor, screens, activeScreenIndex } = e.payload;
+      console.log(
+        `[trail-start] cursor=(${x}, ${y}) screen=(${screenX}, ${screenY}, ${screenW}×${screenH}) scale=${scaleFactor} screens=${screens.length} active=${activeScreenIndex}`,
+      );
+      // 同步更新屏幕信息，确保 screenToCanvas 使用最新值
+      screenRef.current = { screenX, screenY, scaleFactor };
+      screensRef.current = screens;
+      activeScreenIndexRef.current = activeScreenIndex;
       capturingRef.current = true;
-      trailRef.current = [e.payload];
+      setCapturing(true);
+      trailRef.current = [{ x, y }];
       setLabel(null);
       drawTrail(trailRef.current, true);
     });
@@ -123,6 +214,7 @@ function Overlay() {
     const unlistenResult = listen<GestureResult>("gesture-result", (e) => {
       const r = e.payload;
       capturingRef.current = false;
+      setCapturing(false);
       const pts = r.trail && r.trail.length > 0 ? r.trail : trailRef.current;
       trailRef.current = pts;
       drawTrail(pts, false);
@@ -158,8 +250,20 @@ function Overlay() {
     };
   }, []);
 
+  const vignetteTransition = "opacity 0.15s ease";
+
   return (
     <div style={{ position: "fixed", inset: 0, pointerEvents: "none" }}>
+      {/* 四周渐变蒙层 —— 捕获中淡入，松开后淡出 */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: `radial-gradient(ellipse 120% 120% at 50% 50%, transparent 55%, rgba(0,0,0,${capturing ? 0.13 : 0}) 100%)`,
+          transition: vignetteTransition,
+          pointerEvents: "none",
+        }}
+      />
       <canvas
         ref={canvasRef}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}

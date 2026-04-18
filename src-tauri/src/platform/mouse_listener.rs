@@ -110,6 +110,43 @@ struct TrailPoint {
     y: f64,
 }
 
+/// 单块屏幕信息（用于 trail-start 事件）
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ScreenInfo {
+    /// 屏幕名称
+    name: Option<String>,
+    /// 屏幕左上角（物理像素，全局坐标系）
+    x: f64,
+    y: f64,
+    /// 屏幕尺寸（物理像素）
+    w: f64,
+    h: f64,
+    /// device pixel ratio
+    scale_factor: f64,
+}
+
+/// trail-start 事件 payload，包含鼠标起点和所有屏幕信息
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TrailStart {
+    /// 鼠标按下位置（物理像素，全局坐标）
+    x: f64,
+    y: f64,
+    /// 当前屏幕左上角（物理像素）
+    screen_x: f64,
+    screen_y: f64,
+    /// 当前屏幕尺寸（物理像素）
+    screen_w: f64,
+    screen_h: f64,
+    /// 当前屏幕的 device pixel ratio（scale factor）
+    scale_factor: f64,
+    /// 所有已连接屏幕（物理像素坐标）
+    screens: Vec<ScreenInfo>,
+    /// 当前活跃屏幕在 screens 中的下标
+    active_screen_index: usize,
+}
+
 fn handle_raw_event(
     event: RawEvent,
     app: &AppHandle,
@@ -136,7 +173,7 @@ fn handle_raw_event(
 
         RawEvent::MousePress { x, y, button } => {
             let name = button_to_string(&button);
-            tracing::info!("MousePress: {:?} -> {}", button, name);
+            // tracing::info!("MousePress: {:?} -> {}", button, name);
             let _ = app.emit("input-event", &InputEvent::MousePress { button: name });
 
             if button == MouseButton::Middle {
@@ -144,18 +181,37 @@ fn handle_raw_event(
                     *cap = true;
                     pts.clear();
                     pts.push(Point { x, y });
-                    tracing::debug!("middle-button pressed, start capturing");
                 }
-                // 显示覆盖窗口并覆盖当前屏幕
-                show_overlay(app, x, y);
-                // 通知前端起点坐标，画布立即定位
-                let _ = app.emit("trail-start", &TrailPoint { x, y });
+                // 显示覆盖窗口并获取目标屏幕信息
+                let screen = show_overlay(app, x, y);
+                tracing::info!(
+                    cursor_x = x,
+                    cursor_y = y,
+                    screen_x = screen.x,
+                    screen_y = screen.y,
+                    screen_w = screen.w,
+                    screen_h = screen.h,
+                    scale_factor = screen.scale_factor,
+                    "[trail-start] middle-button pressed, overlay positioned"
+                );
+                // 通知前端起点坐标及屏幕信息，前端用于坐标映射（避免异步 outerPosition 偏差）
+                let _ = app.emit("trail-start", &TrailStart {
+                    x,
+                    y,
+                    screen_x: screen.x,
+                    screen_y: screen.y,
+                    screen_w: screen.w,
+                    screen_h: screen.h,
+                    scale_factor: screen.scale_factor,
+                    screens: screen.screens,
+                    active_screen_index: screen.active_screen_index,
+                });
             }
         }
 
         RawEvent::MouseRelease { button } => {
             let name = button_to_string(&button);
-            tracing::info!("MouseRelease: {:?} -> {}", button, name);
+            // tracing::info!("MouseRelease: {:?} -> {}", button, name);
             let _ = app.emit("input-event", &InputEvent::MouseRelease { button: name });
 
             if button == MouseButton::Middle {
@@ -280,52 +336,117 @@ fn process_gesture(
     });
 }
 
+/// 屏幕帧信息（物理像素），用于前端坐标映射
+struct ScreenFrame {
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+    scale_factor: f64,
+    /// 所有屏幕信息（含当前）
+    screens: Vec<ScreenInfo>,
+    /// 当前活跃屏幕在 screens 中的下标
+    active_screen_index: usize,
+}
+
 /// 显示覆盖窗口，铺满鼠标当前所在的屏幕。
 ///
 /// cursor_x / cursor_y 是 CGEvent 屏幕物理像素坐标（左上角原点）。
 /// 遍历所有显示器，找到包含该坐标的那个，将窗口移到它上面并调整为其尺寸。
-fn show_overlay(app: &AppHandle, cursor_x: f64, cursor_y: f64) {
+/// 返回目标屏幕的物理像素 frame，用于 trail-start 事件的坐标映射。
+fn show_overlay(app: &AppHandle, cursor_x: f64, cursor_y: f64) -> ScreenFrame {
     use tauri::PhysicalPosition;
     use tauri::PhysicalSize;
 
-    let Some(win) = app.get_webview_window("overlay") else { return };
+    let fallback = ScreenFrame {
+        x: 0.0, y: 0.0, w: 1920.0, h: 1080.0, scale_factor: 2.0,
+        screens: vec![],
+        active_screen_index: 0,
+    };
+
+    let Some(win) = app.get_webview_window("overlay") else { return fallback };
 
     let monitors = match win.available_monitors() {
         Ok(m) => m,
         Err(_) => {
             let _ = win.set_ignore_cursor_events(true);
             let _ = win.show();
-            return;
+            return fallback;
         }
     };
 
-    // 找到鼠标坐标落在哪块屏幕上
-    let target = monitors.iter().find(|m| {
+    // macOS: Monitor::position() 返回逻辑像素（points），size() 返回物理像素
+    // CGEvent 坐标也是逻辑像素，与 position() 同一坐标系
+    tracing::info!("[screens] total={} cursor_logic=({}, {})", monitors.len(), cursor_x, cursor_y);
+
+    // 构建所有屏幕的逻辑坐标和物理尺寸
+    // logic_x/y: 屏幕逻辑原点（CGEvent 坐标系）
+    // phys_w/h: 屏幕物理尺寸（用于窗口 set_size）
+    // phys_origin_x/y = logic_x * scale，用于窗口 set_position（PhysicalPosition）
+    let screen_infos: Vec<(f64, f64, f64, f64, f64, f64, f64, Option<String>)> = monitors.iter().enumerate().map(|(i, m)| {
         let pos = m.position();
         let size = m.size();
-        let x = pos.x as f64;
-        let y = pos.y as f64;
-        let w = size.width as f64;
-        let h = size.height as f64;
-        cursor_x >= x && cursor_x < x + w && cursor_y >= y && cursor_y < y + h
-    });
-
-    // 找不到（罕见）则回退到第一块屏幕
-    let monitor = target.or_else(|| monitors.first());
-
-    if let Some(m) = monitor {
-        let pos = m.position();
-        let size = m.size();
-        let _ = win.set_position(PhysicalPosition::new(pos.x, pos.y));
-        let _ = win.set_size(PhysicalSize::new(size.width, size.height));
-        tracing::debug!(
-            "overlay → monitor at ({},{}) size {}×{}",
-            pos.x, pos.y, size.width, size.height
+        let scale = m.scale_factor();
+        let logic_x = pos.x as f64;
+        let logic_y = pos.y as f64;
+        let phys_x = logic_x * scale;
+        let phys_y = logic_y * scale;
+        let phys_w = size.width as f64;
+        let phys_h = size.height as f64;
+        // 屏幕逻辑尺寸（CGEvent 坐标系中该屏幕覆盖的范围）
+        let logic_w = phys_w / scale;
+        let logic_h = phys_h / scale;
+        tracing::info!(
+            "[screens] #{} name={:?} logic_pos=({},{}) logic_size={}×{} phys_pos=({},{}) phys_size={}×{} scale={}",
+            i, m.name(), logic_x, logic_y, logic_w, logic_h, phys_x as i32, phys_y as i32, phys_w, phys_h, scale,
         );
-    }
+        (logic_x, logic_y, phys_w, phys_h, scale, phys_x, phys_y, m.name().map(|s| s.to_string()))
+    }).collect();
+
+    // 用逻辑坐标（与 CGEvent 同一空间）判断鼠标在哪块屏幕
+    let target_idx = screen_infos.iter().position(|&(lx, ly, pw, ph, scale, _, _, _)| {
+        let lw = pw / scale;
+        let lh = ph / scale;
+        cursor_x >= lx && cursor_x < lx + lw && cursor_y >= ly && cursor_y < ly + lh
+    }).or(if screen_infos.is_empty() { None } else { Some(0) });
+
+    let active_idx = target_idx.unwrap_or(0);
+    // (logic_x, logic_y, phys_w, phys_h, scale, phys_x, phys_y, name)
+    let (_, _, active_phys_w, active_phys_h, active_scale, active_phys_x, active_phys_y, _) =
+        screen_infos.get(active_idx).cloned().unwrap_or((0.0, 0.0, 1920.0, 1080.0, 2.0, 0.0, 0.0, None));
+
+    // 将 overlay 窗口移到目标屏幕（使用物理像素坐标）
+    let _ = win.set_position(PhysicalPosition::new(active_phys_x as i32, active_phys_y as i32));
+    let _ = win.set_size(PhysicalSize::new(active_phys_w as u32, active_phys_h as u32));
+
+    tracing::info!(
+        "[screens] selected #{} phys_pos=({},{}) phys_size={}×{} scale={}",
+        active_idx, active_phys_x, active_phys_y, active_phys_w, active_phys_h, active_scale,
+    );
 
     let _ = win.set_ignore_cursor_events(true);
     let _ = win.show();
+
+    // 构建 ScreenInfo 列表（发给前端）
+    // x/y 使用物理坐标，前端除以 scale_factor 还原为逻辑原点（与 CGEvent 坐标系一致）
+    let screens = screen_infos.iter().map(|(_, _, pw, ph, scale, phys_x, phys_y, name)| ScreenInfo {
+        name: name.clone(),
+        x: *phys_x,
+        y: *phys_y,
+        w: *pw,
+        h: *ph,
+        scale_factor: *scale,
+    }).collect();
+
+    ScreenFrame {
+        x: active_phys_x,
+        y: active_phys_y,
+        w: active_phys_w,
+        h: active_phys_h,
+        scale_factor: active_scale,
+        screens,
+        active_screen_index: active_idx,
+    }
 }
 
 fn hide_overlay(app: &AppHandle) {
