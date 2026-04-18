@@ -2,7 +2,7 @@ use crate::core::execution::apply_gesture_match;
 use crate::core::execution_result::ExecutionResult;
 use crate::core::state::AppState;
 use crate::domain::gesture::{self, Point};
-use rdev::{Button, EventType, Key};
+use crate::platform::macos_input::{listen, MouseButton, RawEvent};
 use serde::Serialize;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
@@ -17,319 +17,220 @@ pub enum InputEvent {
     MouseRelease { button: String },
 }
 
-fn key_to_string(key: Key) -> String {
-    match key {
-        Key::Alt => "Alt".to_string(),
-        Key::AltGr => "AltGr".to_string(),
-        Key::Backspace => "Backspace".to_string(),
-        Key::CapsLock => "CapsLock".to_string(),
-        Key::ControlLeft => "ControlLeft".to_string(),
-        Key::ControlRight => "ControlRight".to_string(),
-        Key::Delete => "Delete".to_string(),
-        Key::DownArrow => "↓".to_string(),
-        Key::End => "End".to_string(),
-        Key::Escape => "Esc".to_string(),
-        Key::F1 => "F1".to_string(),
-        Key::F2 => "F2".to_string(),
-        Key::F3 => "F3".to_string(),
-        Key::F4 => "F4".to_string(),
-        Key::F5 => "F5".to_string(),
-        Key::F6 => "F6".to_string(),
-        Key::F7 => "F7".to_string(),
-        Key::F8 => "F8".to_string(),
-        Key::F9 => "F9".to_string(),
-        Key::F10 => "F10".to_string(),
-        Key::F11 => "F11".to_string(),
-        Key::F12 => "F12".to_string(),
-        Key::F13 => "F13".to_string(),
-        Key::F14 => "F14".to_string(),
-        Key::F15 => "F15".to_string(),
-        Key::F16 => "F16".to_string(),
-        Key::F17 => "F17".to_string(),
-        Key::F18 => "F18".to_string(),
-        Key::F19 => "F19".to_string(),
-        Key::F20 => "F20".to_string(),
-        Key::F21 => "F21".to_string(),
-        Key::F22 => "F22".to_string(),
-        Key::F23 => "F23".to_string(),
-        Key::F24 => "F24".to_string(),
-        Key::Home => "Home".to_string(),
-        Key::LeftArrow => "←".to_string(),
-        Key::MetaLeft => "⌘Left".to_string(),
-        Key::MetaRight => "⌘Right".to_string(),
-        Key::PageDown => "PageDown".to_string(),
-        Key::PageUp => "PageUp".to_string(),
-        Key::Return => "Return".to_string(),
-        Key::RightArrow => "→".to_string(),
-        Key::ShiftLeft => "ShiftLeft".to_string(),
-        Key::ShiftRight => "ShiftRight".to_string(),
-        Key::Space => "Space".to_string(),
-        Key::Tab => "Tab".to_string(),
-        Key::UpArrow => "↑".to_string(),
-        Key::PrintScreen => "PrintScreen".to_string(),
-        Key::ScrollLock => "ScrollLock".to_string(),
-        Key::Pause => "Pause".to_string(),
-        Key::NumLock => "NumLock".to_string(),
-        Key::BackQuote => "`".to_string(),
-        Key::Num1 => "1".to_string(),
-        Key::Num2 => "2".to_string(),
-        Key::Num3 => "3".to_string(),
-        Key::Num4 => "4".to_string(),
-        Key::Num5 => "5".to_string(),
-        Key::Num6 => "6".to_string(),
-        Key::Num7 => "7".to_string(),
-        Key::Num8 => "8".to_string(),
-        Key::Num9 => "9".to_string(),
-        Key::Num0 => "0".to_string(),
-        Key::Minus => "-".to_string(),
-        Key::Equal => "=".to_string(),
-        Key::KeyQ => "Q".to_string(),
-        Key::KeyW => "W".to_string(),
-        Key::KeyE => "E".to_string(),
-        Key::KeyR => "R".to_string(),
-        Key::KeyT => "T".to_string(),
-        Key::KeyY => "Y".to_string(),
-        Key::KeyU => "U".to_string(),
-        Key::KeyI => "I".to_string(),
-        Key::KeyO => "O".to_string(),
-        Key::KeyP => "P".to_string(),
-        Key::LeftBracket => "[".to_string(),
-        Key::RightBracket => "]".to_string(),
-        Key::KeyA => "A".to_string(),
-        Key::KeyS => "S".to_string(),
-        Key::KeyD => "D".to_string(),
-        Key::KeyF => "F".to_string(),
-        Key::KeyG => "G".to_string(),
-        Key::KeyH => "H".to_string(),
-        Key::KeyJ => "J".to_string(),
-        Key::KeyK => "K".to_string(),
-        Key::KeyL => "L".to_string(),
-        Key::SemiColon => ";".to_string(),
-        Key::Quote => "'".to_string(),
-        Key::BackSlash => "\\".to_string(),
-        Key::IntlBackslash => "IntlBackslash".to_string(),
-        Key::KeyZ => "Z".to_string(),
-        Key::KeyX => "X".to_string(),
-        Key::KeyC => "C".to_string(),
-        Key::KeyV => "V".to_string(),
-        Key::KeyB => "B".to_string(),
-        Key::KeyN => "N".to_string(),
-        Key::KeyM => "M".to_string(),
-        Key::Comma => ",".to_string(),
-        Key::Dot => ".".to_string(),
-        Key::Slash => "/".to_string(),
-        Key::Insert => "Insert".to_string(),
-        Key::KpReturn => "Enter".to_string(),
-        Key::KpMinus => "Num-".to_string(),
-        Key::KpPlus => "Num+".to_string(),
-        Key::KpMultiply => "Num*".to_string(),
-        Key::KpDivide => "Num/".to_string(),
-        Key::Kp0 => "Num0".to_string(),
-        Key::Kp1 => "Num1".to_string(),
-        Key::Kp2 => "Num2".to_string(),
-        Key::Kp3 => "Num3".to_string(),
-        Key::Kp4 => "Num4".to_string(),
-        Key::Kp5 => "Num5".to_string(),
-        Key::Kp6 => "Num6".to_string(),
-        Key::Kp7 => "Num7".to_string(),
-        Key::Kp8 => "Num8".to_string(),
-        Key::Kp9 => "Num9".to_string(),
-        Key::KpDelete => "NumDel".to_string(),
-        Key::Function => "Function".to_string(),
-        Key::Unknown(code) => format!("Unknown({})", code),
-    }
-}
-
-fn button_to_string(button: Button) -> String {
+fn button_to_string(button: &MouseButton) -> String {
     match button {
-        Button::Left => "左键".to_string(),
-        Button::Right => "右键".to_string(),
-        Button::Middle => "中键".to_string(),
-        Button::Unknown(code) => format!("Unknown({})", code),
+        MouseButton::Left => "左键".to_string(),
+        MouseButton::Right => "右键".to_string(),
+        MouseButton::Middle => "中键".to_string(),
+        MouseButton::Other(n) => format!("Button{}", n),
     }
 }
 
-/// 获取当前前台应用 bundle id；失败时返回 None，匹配阶段可回退为 global
+/// macOS 虚拟键码 → 可读字符串（常用键）
+fn keycode_to_string(code: u32) -> String {
+    match code {
+        0 => "A", 1 => "S", 2 => "D", 3 => "F", 4 => "H", 5 => "G",
+        6 => "Z", 7 => "X", 8 => "C", 9 => "V", 11 => "B", 12 => "Q",
+        13 => "W", 14 => "E", 15 => "R", 16 => "Y", 17 => "T", 18 => "1",
+        19 => "2", 20 => "3", 21 => "4", 22 => "6", 23 => "5", 24 => "=",
+        25 => "9", 26 => "7", 27 => "-", 28 => "8", 29 => "0", 30 => "]",
+        31 => "O", 32 => "U", 33 => "[", 34 => "I", 35 => "P", 36 => "Return",
+        37 => "L", 38 => "J", 39 => "'", 40 => "K", 41 => ";", 42 => "\\",
+        43 => ",", 44 => "/", 45 => "N", 46 => "M", 47 => ".", 48 => "Tab",
+        49 => "Space", 50 => "`", 51 => "Backspace", 53 => "Esc",
+        54 => "⌘Right", 55 => "⌘Left", 56 => "ShiftLeft", 57 => "CapsLock",
+        58 => "Alt", 59 => "ControlLeft", 60 => "ShiftRight", 61 => "AltGr",
+        62 => "ControlRight", 63 => "Function",
+        96 => "F5", 97 => "F6", 98 => "F7", 99 => "F3", 100 => "F8",
+        101 => "F9", 103 => "F11", 105 => "PrintScreen", 107 => "ScrollLock",
+        109 => "F10", 111 => "F12", 113 => "Pause", 114 => "Insert",
+        115 => "Home", 116 => "PageUp", 117 => "Delete", 118 => "F4",
+        119 => "End", 120 => "F2", 121 => "PageDown", 122 => "F1",
+        123 => "←", 124 => "→", 125 => "↓", 126 => "↑",
+        71 => "NumLock", 75 => "Num/", 76 => "Enter", 78 => "Num-",
+        81 => "Num=", 82 => "Num0", 83 => "Num1", 84 => "Num2", 85 => "Num3",
+        86 => "Num4", 87 => "Num5", 88 => "Num6", 89 => "Num7",
+        91 => "Num8", 92 => "Num9",
+        _ => "",
+    }
+    .to_string()
+    .pipe(|s| if s.is_empty() { format!("Key({})", code) } else { s })
+}
+
+trait Pipe: Sized {
+    fn pipe<B, F: FnOnce(Self) -> B>(self, f: F) -> B { f(self) }
+}
+impl Pipe for String {}
+
+/// 获取当前前台应用 bundle id；失败时返回 None，匹配阶段回退为 global
 fn frontmost_bundle_id() -> Option<String> {
-    let script =
-        r#"tell application "System Events" to get bundle identifier of first application process whose frontmost is true"#;
+    let script = r#"tell application "System Events" to get bundle identifier of first application process whose frontmost is true"#;
     let output = Command::new("osascript").arg("-e").arg(script).output().ok()?;
     if !output.status.success() {
         return None;
     }
     let s = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if s.is_empty() {
-        None
-    } else {
-        Some(s)
-    }
+    if s.is_empty() { None } else { Some(s) }
 }
 
 pub fn spawn_middle_button_listener(app: AppHandle, state: Arc<Mutex<AppState>>) {
     std::thread::spawn(move || {
-        tracing::info!("middle-button listener thread started, waiting for rdev events...");
-        tracing::info!("IMPORTANT: If no events appear, grant Accessibility permission in System Settings");
-        
+        tracing::info!("input listener thread started (native CGEventTap)");
+        tracing::info!("IMPORTANT: grant Accessibility permission in System Settings if no events appear");
+
         let capturing = Arc::new(Mutex::new(false));
         let points = Arc::new(Mutex::new(Vec::<Point>::new()));
         let last_xy = Arc::new(Mutex::new((0.0_f64, 0.0_f64)));
 
-        let capturing_clone = capturing.clone();
-        let points_clone = points.clone();
-        let last_xy_clone = last_xy.clone();
-        let state_clone = state.clone();
-        let app_clone = app.clone();
+        let capturing_c = capturing.clone();
+        let points_c = points.clone();
+        let last_xy_c = last_xy.clone();
+        let state_c = state.clone();
+        let app_c = app.clone();
 
-        // 修复 macOS 键盘崩溃：告知 rdev 当前不在主线程
-        // 参考: https://github.com/Narsil/rdev/issues/165
-        #[cfg(target_os = "macos")]
-        rdev::set_is_main_thread(false);
+        if let Err(e) = listen(move |event| {
+            handle_raw_event(
+                event,
+                &app_c,
+                &state_c,
+                &capturing_c,
+                &points_c,
+                &last_xy_c,
+            );
+        }) {
+            tracing::error!("CGEventTap listen error: {}", e);
+        }
+    });
+}
 
-        tracing::info!("starting rdev::listen...");
-        if let Err(e) = rdev::listen(move |event| {
-            match event.event_type {
-                EventType::MouseMove { x, y } => {
-                    if let Ok(mut last) = last_xy_clone.lock() {
-                        *last = (x, y);
+fn handle_raw_event(
+    event: RawEvent,
+    app: &AppHandle,
+    state: &Arc<Mutex<AppState>>,
+    capturing: &Arc<Mutex<bool>>,
+    points: &Arc<Mutex<Vec<Point>>>,
+    last_xy: &Arc<Mutex<(f64, f64)>>,
+) {
+    match event {
+        RawEvent::MouseMove { x, y } => {
+            if let Ok(mut last) = last_xy.lock() {
+                *last = (x, y);
+            }
+            if let Ok(cap) = capturing.lock() {
+                if *cap {
+                    if let Ok(mut pts) = points.lock() {
+                        pts.push(Point { x, y });
                     }
-                    if let Ok(cap) = capturing_clone.lock() {
+                }
+            }
+        }
+
+        RawEvent::MousePress { x, y, button } => {
+            let name = button_to_string(&button);
+            tracing::info!("MousePress: {:?} -> {}", button, name);
+            let _ = app.emit("input-event", &InputEvent::MousePress { button: name });
+
+            if button == MouseButton::Middle {
+                if let (Ok(mut cap), Ok(mut pts)) = (capturing.lock(), points.lock()) {
+                    *cap = true;
+                    pts.clear();
+                    pts.push(Point { x, y });
+                    tracing::debug!("middle-button pressed, start capturing");
+                }
+            }
+        }
+
+        RawEvent::MouseRelease { button } => {
+            let name = button_to_string(&button);
+            tracing::info!("MouseRelease: {:?} -> {}", button, name);
+            let _ = app.emit("input-event", &InputEvent::MouseRelease { button: name });
+
+            if button == MouseButton::Middle {
+                let should_process = capturing
+                    .lock()
+                    .map(|mut cap| {
                         if *cap {
-                            if let Ok(mut pts) = points_clone.lock() {
-                                pts.push(Point { x, y });
-                            }
-                        }
-                    }
-                }
-                EventType::ButtonPress(button) => {
-                    // 发送鼠标按键事件到前端
-                    let button_name = button_to_string(button);
-                    tracing::info!("Button pressed: {:?} -> {}", button, button_name);
-                    let event = InputEvent::MousePress { button: button_name.clone() };
-                    if let Err(e) = app_clone.emit("input-event", &event) {
-                        tracing::error!("Failed to emit mouse press event: {}", e);
-                    }
-                    
-                    if matches!(button, Button::Middle) {
-                        if let (Ok(mut cap), Ok(mut pts), Ok(last)) = 
-                            (capturing_clone.lock(), points_clone.lock(), last_xy_clone.lock()) {
-                            *cap = true;
-                            pts.clear();
-                            pts.push(Point {
-                                x: last.0,
-                                y: last.1,
-                            });
-                            tracing::debug!("middle-button pressed, start capturing");
-                        }
-                    }
-                }
-                EventType::ButtonRelease(button) => {
-                    // 发送鼠标释放事件到前端
-                    let button_name = button_to_string(button);
-                    tracing::info!("Button released: {:?} -> {}", button, button_name);
-                    let event = InputEvent::MouseRelease { button: button_name.clone() };
-                    if let Err(e) = app_clone.emit("input-event", &event) {
-                        tracing::error!("Failed to emit mouse release event: {}", e);
-                    }
-                    
-                    let should_process = if matches!(button, Button::Middle) {
-                        if let Ok(mut cap) = capturing_clone.lock() {
-                            if *cap {
-                                *cap = false;
-                                true
-                            } else {
-                                false
-                            }
+                            *cap = false;
+                            true
                         } else {
                             false
                         }
-                    } else {
-                        false
-                    };
+                    })
+                    .unwrap_or(false);
 
-                    if should_process {
-                        let pts = if let Ok(mut points_guard) = points_clone.lock() {
-                            std::mem::take(&mut *points_guard)
-                        } else {
-                            return;
-                        };
-
-                        let scope =
-                            frontmost_bundle_id().unwrap_or_else(|| "global".to_string());
-                        let result = {
-                            let mut guard = match state_clone.lock() {
-                                Ok(g) => g,
-                                Err(_) => return,
-                            };
-                            if !guard.config.value().enabled {
-                                tracing::debug!("middle-button gesture ignored: app disabled");
-                                return;
-                            }
-                            let tokens = guard.recognizer.recognize(&pts);
-                            let gesture_str = gesture::directions_to_string(&tokens);
-                            let r = if gesture_str.is_empty() {
-                                tracing::debug!("middle-button: no gesture tokens");
-                                ExecutionResult {
-                                    matched: false,
-                                    scope: scope.clone(),
-                                    gesture: String::new(),
-                                    rule_name: None,
-                                    action_type: None,
-                                    success: false,
-                                    message: "no gesture (movement too small)".to_string(),
-                                    trigger: Some("middle_button".to_string()),
-                                }
-                            } else {
-                                let base = apply_gesture_match(&mut guard, &gesture_str, &scope);
-                                tracing::info!(
-                                    gesture = %gesture_str,
-                                    scope = %scope,
-                                    matched = base.matched,
-                                    "middle-button gesture completed"
-                                );
-                                ExecutionResult {
-                                    trigger: Some("middle_button".to_string()),
-                                    ..base
-                                }
-                            };
-                            guard.last_execution = Some(r.clone());
-                            r
-                        };
-                        if let Err(err) = app_clone.emit("gesture-result", &result) {
-                            tracing::warn!("emit gesture-result failed: {}", err);
-                        }
-                    }
-                }
-                EventType::KeyPress(key) => {
-                    // 发送键盘按下事件到前端
-                    let key_str = key_to_string(key);
-                    tracing::debug!("Key pressed: {:?} -> {}", key, key_str);
-                    let event = InputEvent::KeyPress { 
-                        key: key_str, 
-                        code: if let Key::Unknown(code) = key { Some(code) } else { None }
-                    };
-                    if let Err(e) = app_clone.emit("input-event", &event) {
-                        tracing::error!("Failed to emit key press event: {}", e);
-                    }
-                }
-                EventType::KeyRelease(key) => {
-                    // 发送键盘释放事件到前端
-                    let key_str = key_to_string(key);
-                    let event = InputEvent::KeyRelease { 
-                        key: key_str, 
-                        code: if let Key::Unknown(code) = key { Some(code) } else { None }
-                    };
-                    let _ = app_clone.emit("input-event", &event);
-                }
-                _ => {
-                    // 首次收到任何事件,确认 rdev 正常工作
-                    static FIRST_EVENT: std::sync::Once = std::sync::Once::new();
-                    FIRST_EVENT.call_once(|| {
-                        tracing::info!("rdev listener is receiving events (first event received)");
-                    });
+                if should_process {
+                    process_gesture(app, state, points);
                 }
             }
-        }) {
-            tracing::error!("rdev listen exited with error: {:?}", e);
         }
-    });
+
+        RawEvent::KeyPress { keycode } => {
+            let key = keycode_to_string(keycode);
+            tracing::debug!("KeyPress: {}", key);
+            let _ = app.emit(
+                "input-event",
+                &InputEvent::KeyPress { key, code: Some(keycode) },
+            );
+        }
+
+        RawEvent::KeyRelease { keycode } => {
+            let key = keycode_to_string(keycode);
+            let _ = app.emit(
+                "input-event",
+                &InputEvent::KeyRelease { key, code: Some(keycode) },
+            );
+        }
+    }
+}
+
+fn process_gesture(
+    app: &AppHandle,
+    state: &Arc<Mutex<AppState>>,
+    points: &Arc<Mutex<Vec<Point>>>,
+) {
+    let pts = match points.lock() {
+        Ok(mut g) => std::mem::take(&mut *g),
+        Err(_) => return,
+    };
+
+    let scope = frontmost_bundle_id().unwrap_or_else(|| "global".to_string());
+
+    let result = match state.lock() {
+        Ok(mut guard) => {
+            if !guard.config.value().enabled {
+                tracing::debug!("middle-button gesture ignored: app disabled");
+                return;
+            }
+            let tokens = guard.recognizer.recognize(&pts);
+            let gesture_str = gesture::directions_to_string(&tokens);
+
+            if gesture_str.is_empty() {
+                tracing::debug!("middle-button: no gesture tokens");
+                ExecutionResult {
+                    matched: false,
+                    scope,
+                    gesture: String::new(),
+                    rule_name: None,
+                    action_type: None,
+                    success: false,
+                    message: "no gesture (movement too small)".to_string(),
+                    trigger: Some("middle_button".to_string()),
+                }
+            } else {
+                let base = apply_gesture_match(&mut guard, &gesture_str, &scope);
+                tracing::info!(
+                    gesture = %gesture_str,
+                    scope = %scope,
+                    matched = base.matched,
+                    "middle-button gesture completed"
+                );
+                ExecutionResult { trigger: Some("middle_button".to_string()), ..base }
+            }
+        }
+        Err(_) => return,
+    };
+
+    if let Err(e) = app.emit("gesture-result", &result) {
+        tracing::warn!("emit gesture-result failed: {}", e);
+    }
 }
