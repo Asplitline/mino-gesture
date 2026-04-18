@@ -11,33 +11,27 @@ export function HistorySection({
   if (history.length === 0) return null;
 
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">历史记录</h2>
-        <button onClick={onClear} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+        <h2 className="soft-section-title">历史记录</h2>
+        <button onClick={onClear} className="text-xs text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-secondary)]">
           清空
         </button>
       </div>
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+      <div className="soft-scroll-list">
         {history.map((r, i) => {
           const arrows = parseGestureArrows(r.gesture);
           return (
-            <div key={i} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+            <div key={i} className="soft-scroll-item">
               <div className="flex gap-0.5">
                 {arrows.map((a, j) => (
-                  <span key={j} className="text-base text-indigo-500 dark:text-indigo-400">
+                  <span key={j} className="text-base text-[var(--primary)]">
                     {a}
                   </span>
                 ))}
               </div>
-              <span className="font-mono text-xs text-gray-400">{r.gesture}</span>
-              <span
-                className={`ml-auto text-xs px-1.5 py-0.5 rounded-full ${
-                  r.matched
-                    ? "bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-400"
-                }`}
-              >
+              <span className="font-mono text-xs text-[var(--text-tertiary)]">{r.gesture}</span>
+              <span className={`soft-chip ml-auto ${r.matched ? "soft-chip-success" : "soft-chip-muted"}`}>
                 {r.matched ? "匹配" : "未匹配"}
               </span>
             </div>

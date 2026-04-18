@@ -14,8 +14,9 @@
     "windows": [
       {
         "label": "main",
-        "title": "Mino Gesture",
+        "title": "",
         "width": 840,
+        "minWidth": 840,
         "height": 620,
         "resizable": true
       },

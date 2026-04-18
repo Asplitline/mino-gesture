@@ -21,7 +21,7 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
   const scale = svgW / totalW;
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-4">
+    <div className="soft-card p-4">
       <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="block mx-auto" style={{ maxWidth: "100%" }}>
         {screens.map((s, i) => {
           const x = (s.x - minX) * scale;
@@ -38,10 +38,9 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
                 height={h}
                 rx={4}
                 ry={4}
-                fill={isActive ? "rgba(99,102,241,0.15)" : "rgba(156,163,175,0.12)"}
-                stroke={isActive ? "rgb(99,102,241)" : "rgb(209,213,219)"}
+                fill={isActive ? "rgba(111,99,246,0.18)" : "rgba(169,197,255,0.2)"}
+                stroke={isActive ? "rgb(111,99,246)" : "rgba(120,130,160,0.44)"}
                 strokeWidth={isActive ? 2 : 1}
-                className="dark:[stroke:rgb(79,82,221)] dark:[fill:rgba(99,102,241,0.2)]"
               />
               <text
                 x={x + w / 2}
@@ -50,7 +49,7 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
                 dominantBaseline="middle"
                 fontSize={Math.max(11, Math.min(18, h * 0.3))}
                 fontWeight="700"
-                fill={isActive ? "rgb(79,70,229)" : "rgb(156,163,175)"}
+                fill={isActive ? "rgb(42,49,71)" : "rgb(154,163,186)"}
               >
                 {i + 1}
               </text>
@@ -61,7 +60,7 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fontSize={Math.max(8, Math.min(11, h * 0.18))}
-                  fill={isActive ? "rgb(99,102,241)" : "rgb(156,163,175)"}
+                  fill={isActive ? "rgb(105,113,137)" : "rgb(154,163,186)"}
                 >
                   {s.name.length > 14 ? `${s.name.slice(0, 13)}…` : s.name}
                 </text>

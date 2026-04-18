@@ -5,11 +5,25 @@ import { HistorySection } from "./components/HistorySection";
 import { ResultSection } from "./components/ResultSection";
 import { RuleSection } from "./components/RuleSection";
 import { ScreenMap } from "./components/ScreenMap";
+import bannerImage from "./images/banner.webp";
 import type { ActionConfig, GestureResult, RuleConfig, ScreenInfo, TrailStartPayload } from "./types/app";
 
+type ViewRoute = "home" | "panel";
+
+function readRouteState(): { route: ViewRoute; search: string } {
+  if (typeof window === "undefined") return { route: "home", search: "" };
+  return {
+    route: window.location.pathname === "/panel" ? "panel" : "home",
+    search: window.location.search,
+  };
+}
+
 export function App() {
+  const [routeState, setRouteState] = useState(readRouteState);
+  const route = routeState.route;
   const [isListening, setIsListening] = useState(false);
   const capturingRef = useRef(false);
+  const handledIntentRef = useRef<string>("");
   const [lastResult, setLastResult] = useState<GestureResult | null>(null);
   const [history, setHistory] = useState<GestureResult[]>([]);
   const [screens, setScreens] = useState<ScreenInfo[]>([]);
@@ -26,6 +40,12 @@ export function App() {
   const actionById = useMemo(() => {
     return Object.fromEntries(actions.map((a) => [a.id, a]));
   }, [actions]);
+  const shouldAutoCreateRule = useMemo(() => new URLSearchParams(routeState.search).get("intent") === "create", [routeState.search]);
+
+  const navigateTo = (to: string) => {
+    window.history.pushState({}, "", to);
+    setRouteState(readRouteState());
+  };
 
   const refreshRulesAndActions = async () => {
     setRulesLoading(true);
@@ -45,6 +65,17 @@ export function App() {
   };
 
   useEffect(() => {
+    const onPopState = () => setRouteState(readRouteState());
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  useEffect(() => {
+    if (route !== "panel") {
+      setIsListening(false);
+      return;
+    }
+
     setIsListening(true);
     void refreshRulesAndActions();
 
@@ -69,7 +100,7 @@ export function App() {
       unlistenStart.then((fn) => fn());
       unlistenResult.then((fn) => fn());
     };
-  }, []);
+  }, [route]);
 
   const updateRuleLocal = (id: string, patch: Partial<RuleConfig>) => {
     setRules((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -151,52 +182,102 @@ export function App() {
     }
   };
 
+  useEffect(() => {
+    if (route !== "panel") return;
+    if (!shouldAutoCreateRule) return;
+    if (rulesLoading || creatingRule || actions.length === 0) return;
+
+    const intentKey = routeState.search;
+    if (handledIntentRef.current === intentKey) return;
+    handledIntentRef.current = intentKey;
+
+    void createRule().finally(() => {
+      window.history.replaceState({}, "", "/panel");
+      setRouteState(readRouteState());
+    });
+  }, [route, shouldAutoCreateRule, rulesLoading, creatingRule, actions.length, routeState.search]);
+
+  if (route === "home") {
+    return (
+      <div className="soft-home-shell">
+        <section className="soft-home-panel">
+          <div className="soft-home-glow" aria-hidden="true" />
+          <div className="soft-home-stack">
+            {/* <img className="soft-home-banner-image" src={bannerImage} alt="" /> */}
+            <h1 className="text-[34px] font-semibold leading-[1.2] text-[var(--text-primary)]">Welcome to Gesture Control</h1>
+            <p className="mx-auto mt-3 max-w-sm text-sm text-[var(--text-secondary)]">
+              配置你的首个鼠标手势流程，快速进入控制中心。
+            </p>
+
+            <div className="mx-auto mt-7 flex max-w-sm flex-col gap-3">
+              <button type="button" className="soft-btn soft-btn-primary h-12 text-lg font-semibold" onClick={() => navigateTo("/panel")}>
+                Get Started with a Demo Gesture
+              </button>
+              <button type="button" className="soft-btn h-12 text-base font-medium" onClick={() => navigateTo("/panel?intent=create")}>
+                Create a New Gesture
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100">
-      <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">Mino Gesture</h1>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">按住中/右键画手势</p>
+    <div className="soft-page-shell">
+      <div className="soft-main-wrap">
+        <header className="soft-header">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <button
+                type="button"
+                className="mb-2 inline-flex items-center rounded-[12px] border border-[var(--border)] bg-white/70 px-2.5 py-1 text-xs text-[var(--text-secondary)] transition-all hover:-translate-y-[1px] hover:bg-white"
+                onClick={() => navigateTo("/")}
+              >
+                返回首页
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className={`h-2 w-2 rounded-full ${isListening ? "bg-[var(--success)] shadow-[0_0_12px_rgba(116,215,188,0.7)]" : "bg-[var(--text-tertiary)]"}`}
+              />
+              <span className="text-xs text-[var(--text-secondary)]">{isListening ? "监听中" : "未连接"}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isListening ? "bg-green-500 animate-pulse" : "bg-gray-300"}`} />
-            <span className="text-xs text-gray-500 dark:text-gray-400">{isListening ? "监听中" : "未连接"}</span>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="p-6 space-y-6 max-w-4xl mx-auto">
-        <ResultSection lastResult={lastResult} />
+        <main className="soft-main">
+          <ResultSection lastResult={lastResult} />
 
-        <RuleSection
-          rules={rules}
-          actions={actions}
-          actionById={actionById}
-          rulesLoading={rulesLoading}
-          rulesError={rulesError}
-          creatingRule={creatingRule}
-          resettingRules={resettingRules}
-          savingRuleId={savingRuleId}
-          onCreateRule={() => void createRule()}
-          onResetRules={() => void resetRules()}
-          onRulePatch={updateRuleLocal}
-          onSaveRule={(rule) => void saveRule(rule)}
-          onDeleteRule={(id) => void removeRule(id)}
-        />
+          <RuleSection
+            rules={rules}
+            actions={actions}
+            actionById={actionById}
+            rulesLoading={rulesLoading}
+            rulesError={rulesError}
+            creatingRule={creatingRule}
+            resettingRules={resettingRules}
+            savingRuleId={savingRuleId}
+            onCreateRule={() => void createRule()}
+            onResetRules={() => void resetRules()}
+            onRulePatch={updateRuleLocal}
+            onSaveRule={(rule) => void saveRule(rule)}
+            onDeleteRule={(id) => void removeRule(id)}
+          />
 
-        <HistorySection history={history} onClear={() => setHistory([])} />
+          <HistorySection history={history} onClear={() => setHistory([])} />
 
-        {screens.length > 0 && (
-          <section className="space-y-2">
-            <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              屏幕布局
-              <span className="ml-2 text-xs font-normal text-gray-400 dark:text-gray-600">{screens.length} 块显示器</span>
-            </h2>
-            <ScreenMap screens={screens} activeIndex={activeScreenIndex} />
-          </section>
-        )}
-      </main>
+          {screens.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="soft-section-title">
+                屏幕布局
+                <span className="ml-2 soft-subtle">{screens.length} 块显示器</span>
+              </h2>
+              <ScreenMap screens={screens} activeIndex={activeScreenIndex} />
+            </section>
+          )}
+        </main>
+      </div>
     </div>
   );
 }

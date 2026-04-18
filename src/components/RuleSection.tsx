@@ -33,47 +33,51 @@ export function RuleSection({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">规则配置</h2>
+        <h2 className="soft-section-title">规则配置</h2>
         <div className="flex gap-2">
           <button
             onClick={onCreateRule}
             disabled={creatingRule || rulesLoading}
-            className="text-xs rounded border border-indigo-200 text-indigo-700 px-2.5 py-1 hover:bg-indigo-50 disabled:opacity-50"
+            className="soft-btn soft-btn-primary"
           >
             {creatingRule ? "新增中..." : "新增规则"}
           </button>
           <button
             onClick={onResetRules}
             disabled={resettingRules || rulesLoading}
-            className="text-xs rounded border border-gray-300 text-gray-700 px-2.5 py-1 hover:bg-gray-100 disabled:opacity-50"
+            className="soft-btn"
           >
             {resettingRules ? "重置中..." : "重置默认规则"}
           </button>
         </div>
       </div>
 
-      {rulesError && <div className="text-xs rounded border border-red-200 bg-red-50 text-red-600 px-3 py-2">{rulesError}</div>}
+      {rulesError && (
+        <div className="rounded-[16px] border border-[color:rgba(242,156,141,0.45)] bg-[color:rgba(242,156,141,0.16)] px-3 py-2 text-xs text-[color:#9b4a3f]">
+          {rulesError}
+        </div>
+      )}
 
       {rulesLoading ? (
-        <div className="text-sm text-gray-400">加载规则中...</div>
+        <div className="text-sm text-[var(--text-tertiary)]">加载规则中...</div>
       ) : rules.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-6 text-sm text-gray-400">暂无规则。</div>
+        <div className="soft-empty p-6 text-sm text-[var(--text-tertiary)]">暂无规则。</div>
       ) : (
         <div className="space-y-3">
           {rules.map((rule) => {
             const action = actionById[rule.actionType];
             const busy = savingRuleId === rule.id;
             return (
-              <div key={rule.id} className="rounded-xl border border-gray-200 dark:border-gray-800 p-3 space-y-2">
+              <div key={rule.id} className="soft-card space-y-3 p-3 sm:p-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
                   <input
-                    className="rounded border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-900"
+                    className="soft-input"
                     value={rule.name}
                     onChange={(e) => onRulePatch(rule.id, { name: e.target.value })}
                     placeholder="规则名称"
                   />
                   <select
-                    className="rounded border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-900"
+                    className="soft-select"
                     value={rule.button}
                     onChange={(e) => onRulePatch(rule.id, { button: e.target.value as MouseButtonValue })}
                   >
@@ -84,7 +88,7 @@ export function RuleSection({
                     ))}
                   </select>
                   <select
-                    className="rounded border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-900"
+                    className="soft-select"
                     value={rule.gesture.toUpperCase()}
                     onChange={(e) => onRulePatch(rule.id, { gesture: e.target.value.toUpperCase() })}
                   >
@@ -95,7 +99,7 @@ export function RuleSection({
                     ))}
                   </select>
                   <select
-                    className="rounded border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-sm bg-white dark:bg-gray-900"
+                    className="soft-select"
                     value={rule.actionType}
                     onChange={(e) => onRulePatch(rule.id, { actionType: e.target.value })}
                   >
@@ -107,7 +111,7 @@ export function RuleSection({
                   </select>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-gray-500">
+                <div className="flex items-center gap-3 text-xs text-[var(--text-secondary)]">
                   <label className="inline-flex items-center gap-1.5">
                     <input
                       type="checkbox"
@@ -116,7 +120,7 @@ export function RuleSection({
                     />
                     启用
                   </label>
-                  <span className="font-mono">{rule.id}</span>
+                  <span className="font-mono text-[11px] text-[var(--text-tertiary)]">{rule.id}</span>
                   {action && <span className="ml-auto">{formatHotkey(action)}</span>}
                 </div>
 
@@ -124,14 +128,14 @@ export function RuleSection({
                   <button
                     onClick={() => onSaveRule(rule)}
                     disabled={busy}
-                    className="text-xs rounded border border-indigo-200 text-indigo-700 px-2.5 py-1 hover:bg-indigo-50 disabled:opacity-50"
+                    className="soft-btn soft-btn-primary"
                   >
                     {busy ? "保存中..." : "保存"}
                   </button>
                   <button
                     onClick={() => onDeleteRule(rule.id)}
                     disabled={busy}
-                    className="text-xs rounded border border-red-200 text-red-700 px-2.5 py-1 hover:bg-red-50 disabled:opacity-50"
+                    className="soft-btn border-[color:rgba(242,156,141,0.45)] text-[color:#b46053]"
                   >
                     删除
                   </button>
