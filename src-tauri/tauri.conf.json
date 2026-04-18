@@ -10,12 +10,32 @@
     "devUrl": "http://localhost:5173"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
+        "label": "main",
         "title": "mino-gesture",
         "width": 840,
         "height": 620,
         "resizable": true
+      },
+      {
+        "label": "overlay",
+        "title": "",
+        "url": "/overlay.html",
+        "width": 1920,
+        "height": 1200,
+        "x": 0,
+        "y": 0,
+        "transparent": true,
+        "decorations": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "focus": false,
+        "resizable": false,
+        "acceptFirstMouse": true,
+        "contentProtected": false
       }
     ],
     "security": {

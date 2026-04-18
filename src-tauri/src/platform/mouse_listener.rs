@@ -6,7 +6,7 @@ use crate::platform::macos_input::{listen, MouseButton, RawEvent};
 use serde::Serialize;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -103,6 +103,13 @@ pub fn spawn_middle_button_listener(app: AppHandle, state: Arc<Mutex<AppState>>)
     });
 }
 
+/// 实时轨迹点，用于前端预览
+#[derive(Debug, Clone, Serialize)]
+struct TrailPoint {
+    x: f64,
+    y: f64,
+}
+
 fn handle_raw_event(
     event: RawEvent,
     app: &AppHandle,
@@ -121,6 +128,8 @@ fn handle_raw_event(
                     if let Ok(mut pts) = points.lock() {
                         pts.push(Point { x, y });
                     }
+                    // 实时推送轨迹点给前端，用于捕获中预览
+                    let _ = app.emit("trail-point", &TrailPoint { x, y });
                 }
             }
         }
@@ -137,6 +146,10 @@ fn handle_raw_event(
                     pts.push(Point { x, y });
                     tracing::debug!("middle-button pressed, start capturing");
                 }
+                // 显示覆盖窗口并覆盖当前屏幕
+                show_overlay(app, x, y);
+                // 通知前端起点坐标，画布立即定位
+                let _ = app.emit("trail-start", &TrailPoint { x, y });
             }
         }
 
@@ -183,6 +196,30 @@ fn handle_raw_event(
     }
 }
 
+/// 附带轨迹的手势结果，发往前端
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct GestureResultWithTrail {
+    #[serde(flatten)]
+    result: ExecutionResult,
+    trail: Vec<TrailPoint>,
+}
+
+/// 对轨迹点降采样，最多保留 `max_points` 个点（均匀抽取）
+fn downsample(pts: &[Point], max_points: usize) -> Vec<TrailPoint> {
+    if pts.len() <= max_points {
+        return pts.iter().map(|p| TrailPoint { x: p.x, y: p.y }).collect();
+    }
+    let step = pts.len() as f64 / max_points as f64;
+    (0..max_points)
+        .map(|i| {
+            let idx = (i as f64 * step) as usize;
+            let p = &pts[idx.min(pts.len() - 1)];
+            TrailPoint { x: p.x, y: p.y }
+        })
+        .collect()
+}
+
 fn process_gesture(
     app: &AppHandle,
     state: &Arc<Mutex<AppState>>,
@@ -193,6 +230,7 @@ fn process_gesture(
         Err(_) => return,
     };
 
+    let trail = downsample(&pts, 150);
     let scope = frontmost_bundle_id().unwrap_or_else(|| "global".to_string());
 
     let result = match state.lock() {
@@ -230,7 +268,67 @@ fn process_gesture(
         Err(_) => return,
     };
 
-    if let Err(e) = app.emit("gesture-result", &result) {
+    if let Err(e) = app.emit("gesture-result", &GestureResultWithTrail { result, trail }) {
         tracing::warn!("emit gesture-result failed: {}", e);
     }
+
+    // 延迟 1.3s 后隐藏覆盖窗口（与前端淡出时间匹配）
+    let app_hide = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(1300));
+        hide_overlay(&app_hide);
+    });
+}
+
+/// 显示覆盖窗口，铺满鼠标当前所在的屏幕。
+///
+/// cursor_x / cursor_y 是 CGEvent 屏幕物理像素坐标（左上角原点）。
+/// 遍历所有显示器，找到包含该坐标的那个，将窗口移到它上面并调整为其尺寸。
+fn show_overlay(app: &AppHandle, cursor_x: f64, cursor_y: f64) {
+    use tauri::PhysicalPosition;
+    use tauri::PhysicalSize;
+
+    let Some(win) = app.get_webview_window("overlay") else { return };
+
+    let monitors = match win.available_monitors() {
+        Ok(m) => m,
+        Err(_) => {
+            let _ = win.set_ignore_cursor_events(true);
+            let _ = win.show();
+            return;
+        }
+    };
+
+    // 找到鼠标坐标落在哪块屏幕上
+    let target = monitors.iter().find(|m| {
+        let pos = m.position();
+        let size = m.size();
+        let x = pos.x as f64;
+        let y = pos.y as f64;
+        let w = size.width as f64;
+        let h = size.height as f64;
+        cursor_x >= x && cursor_x < x + w && cursor_y >= y && cursor_y < y + h
+    });
+
+    // 找不到（罕见）则回退到第一块屏幕
+    let monitor = target.or_else(|| monitors.first());
+
+    if let Some(m) = monitor {
+        let pos = m.position();
+        let size = m.size();
+        let _ = win.set_position(PhysicalPosition::new(pos.x, pos.y));
+        let _ = win.set_size(PhysicalSize::new(size.width, size.height));
+        tracing::debug!(
+            "overlay → monitor at ({},{}) size {}×{}",
+            pos.x, pos.y, size.width, size.height
+        );
+    }
+
+    let _ = win.set_ignore_cursor_events(true);
+    let _ = win.show();
+}
+
+fn hide_overlay(app: &AppHandle) {
+    let Some(win) = app.get_webview_window("overlay") else { return };
+    let _ = win.hide();
 }

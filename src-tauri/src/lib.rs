@@ -61,7 +61,7 @@ pub fn run() {
             let state = Arc::new(Mutex::new(AppState {
                 config,
                 input: InputEngine::new(),
-                recognizer: GestureRecognizer::new(5.0),
+                recognizer: GestureRecognizer::new(40.0),
                 rules: RuleEngine::new(),
                 actions: ActionExecutor::new(),
                 last_execution: None,
