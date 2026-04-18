@@ -59,11 +59,11 @@ pub fn run() {
                 .map_err(|e| tauri::Error::Anyhow(e.into()))?;
 
             let state = Arc::new(Mutex::new(AppState {
+                actions: ActionExecutor::new(config.value().actions.clone()),
                 config,
                 input: InputEngine::new(),
                 recognizer: GestureRecognizer::new(40.0),
                 rules: RuleEngine::new(),
-                actions: ActionExecutor::new(),
                 last_execution: None,
             }));
             app.manage(state.clone());
@@ -74,9 +74,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_status,
             commands::list_rules,
+            commands::list_actions,
             commands::create_rule,
             commands::update_rule,
             commands::delete_rule,
+            commands::reset_rules,
             commands::set_enabled,
             commands::execute_gesture,
             commands::run_foundation_probe

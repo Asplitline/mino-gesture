@@ -16,6 +16,10 @@ pub(crate) fn normalize_gesture(gesture: &str) -> String {
     gesture.trim().to_uppercase()
 }
 
+pub(crate) fn normalize_button(button: &str) -> String {
+    button.trim().to_lowercase()
+}
+
 pub(crate) fn validate_gesture(gesture: &str) -> Result<(), String> {
     if gesture.is_empty() {
         return Err("gesture is required".to_string());
@@ -26,18 +30,28 @@ pub(crate) fn validate_gesture(gesture: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub(crate) fn validate_button(button: &str) -> Result<(), String> {
+    if matches!(button, "middle" | "right") {
+        Ok(())
+    } else {
+        Err("button must be one of: middle, right".to_string())
+    }
+}
+
 /// 根据已规范化的手势串与作用域匹配规则并执行动作（不写 `last_execution`）。
 pub(crate) fn apply_gesture_match(
     guard: &mut AppState,
     gesture: &str,
     scope: &str,
+    button: &str,
 ) -> ExecutionResult {
     let gesture = normalize_gesture(gesture);
     let scope = normalize_scope(scope);
+    let button = normalize_button(button);
 
     if let Some(rule) = guard
         .rules
-        .match_rule(guard.config.rules(), &scope, &gesture)
+        .match_rule(guard.config.rules(), &scope, &button, &gesture)
         .cloned()
     {
         match guard.actions.execute_action_type(&rule.action_type) {

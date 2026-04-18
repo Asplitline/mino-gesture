@@ -1,6 +1,5 @@
-use crate::core::execution::{normalize_gesture, normalize_scope};
+use crate::core::execution::{normalize_button, normalize_gesture, normalize_scope};
 use crate::core::execution_result::ExecutionResult;
-use crate::domain::actions::ActionExecutor;
 use crate::core::state::AppState;
 use crate::domain::gesture::{self, Point};
 use crate::platform::macos_input::{listen, MouseButton, RawEvent};
@@ -25,6 +24,15 @@ fn button_to_string(button: &MouseButton) -> String {
         MouseButton::Right => "右键".to_string(),
         MouseButton::Middle => "中键".to_string(),
         MouseButton::Other(n) => format!("Button{}", n),
+    }
+}
+
+fn button_to_rule_value(button: &MouseButton) -> Option<String> {
+    match button {
+        MouseButton::Middle => Some("middle".to_string()),
+        MouseButton::Right => Some("right".to_string()),
+        MouseButton::Left => None,
+        MouseButton::Other(_) => None,
     }
 }
 
@@ -82,6 +90,7 @@ pub fn spawn_middle_button_listener(app: AppHandle, state: Arc<Mutex<AppState>>)
 
         let capturing = Arc::new(Mutex::new(false));
         let points = Arc::new(Mutex::new(Vec::<Point>::new()));
+        let active_button = Arc::new(Mutex::new(None::<MouseButton>));
         let last_xy = Arc::new(Mutex::new((0.0_f64, 0.0_f64)));
         // Monotonically increasing counter: incremented each time the middle button
         // is pressed. The overlay-hide timer captures the value at gesture start and
@@ -90,6 +99,7 @@ pub fn spawn_middle_button_listener(app: AppHandle, state: Arc<Mutex<AppState>>)
 
         let capturing_c = capturing.clone();
         let points_c = points.clone();
+        let active_button_c = active_button.clone();
         let last_xy_c = last_xy.clone();
         let state_c = state.clone();
         let app_c = app.clone();
@@ -102,6 +112,7 @@ pub fn spawn_middle_button_listener(app: AppHandle, state: Arc<Mutex<AppState>>)
                 &state_c,
                 &capturing_c,
                 &points_c,
+                &active_button_c,
                 &last_xy_c,
                 &hide_gen_c,
             );
@@ -161,6 +172,7 @@ fn handle_raw_event(
     state: &Arc<Mutex<AppState>>,
     capturing: &Arc<Mutex<bool>>,
     points: &Arc<Mutex<Vec<Point>>>,
+    active_button: &Arc<Mutex<Option<MouseButton>>>,
     last_xy: &Arc<Mutex<(f64, f64)>>,
     hide_gen: &Arc<AtomicU64>,
 ) {
@@ -185,15 +197,18 @@ fn handle_raw_event(
             // tracing::info!("MousePress: {:?} -> {}", button, name);
             let _ = app.emit("input-event", &InputEvent::MousePress { button: name });
 
-            if button == MouseButton::Middle {
+            if button_to_rule_value(&button).is_some() {
                 // Advance the generation so any pending hide-timer from a previous
                 // gesture will see a mismatch and skip hiding the overlay.
                 hide_gen.fetch_add(1, Ordering::Relaxed);
 
-                if let (Ok(mut cap), Ok(mut pts)) = (capturing.lock(), points.lock()) {
+                if let (Ok(mut cap), Ok(mut pts), Ok(mut btn)) =
+                    (capturing.lock(), points.lock(), active_button.lock())
+                {
                     *cap = true;
                     pts.clear();
                     pts.push(Point { x, y });
+                    *btn = Some(button.clone());
                 }
                 // 显示覆盖窗口并获取目标屏幕信息
                 let screen = show_overlay(app, x, y);
@@ -205,7 +220,8 @@ fn handle_raw_event(
                     screen_w = screen.w,
                     screen_h = screen.h,
                     scale_factor = screen.scale_factor,
-                    "[trail-start] middle-button pressed, overlay positioned"
+                    button = %button_to_string(&button),
+                    "[trail-start] pointer-button pressed, overlay positioned"
                 );
                 // 通知前端起点坐标及屏幕信息，前端用于坐标映射（避免异步 outerPosition 偏差）
                 let _ = app.emit("trail-start", &TrailStart {
@@ -227,18 +243,15 @@ fn handle_raw_event(
             // tracing::info!("MouseRelease: {:?} -> {}", button, name);
             let _ = app.emit("input-event", &InputEvent::MouseRelease { button: name });
 
-            if button == MouseButton::Middle {
-                let should_process = capturing
-                    .lock()
-                    .map(|mut cap| {
-                        if *cap {
-                            *cap = false;
-                            true
-                        } else {
-                            false
-                        }
-                    })
-                    .unwrap_or(false);
+            if button_to_rule_value(&button).is_some() {
+                let mut should_process = false;
+                if let (Ok(mut cap), Ok(mut btn)) = (capturing.lock(), active_button.lock()) {
+                    if *cap && btn.as_ref() == Some(&button) {
+                        *cap = false;
+                        *btn = None;
+                        should_process = true;
+                    }
+                }
 
                 if should_process {
                     // Move all blocking work (osascript × 2) off the CGEventTap
@@ -247,8 +260,9 @@ fn handle_raw_event(
                     let state_c = state.clone();
                     let points_c = points.clone();
                     let hide_gen_c = hide_gen.clone();
+                    let button_s = button_to_rule_value(&button).unwrap_or_else(|| "middle".to_string());
                     std::thread::spawn(move || {
-                        process_gesture(&app_c, &state_c, &points_c, &hide_gen_c);
+                        process_gesture(&app_c, &state_c, &points_c, &hide_gen_c, button_s);
                     });
                 }
             }
@@ -302,6 +316,7 @@ fn process_gesture(
     state: &Arc<Mutex<AppState>>,
     points: &Arc<Mutex<Vec<Point>>>,
     hide_gen: &Arc<AtomicU64>,
+    button: String,
 ) {
     let pts = match points.lock() {
         Ok(mut g) => std::mem::take(&mut *g),
@@ -310,6 +325,7 @@ fn process_gesture(
 
     let trail = downsample(&pts, 150);
     let scope = frontmost_bundle_id().unwrap_or_else(|| "global".to_string());
+    let button = normalize_button(&button);
 
     // Phase 1: recognize + match rule — hold the state lock only for this fast section.
     // We deliberately do NOT execute the action while holding the lock.
@@ -317,19 +333,20 @@ fn process_gesture(
         result: ExecutionResult,
         /// action_type to execute after releasing the lock (None = no-op).
         pending_action: Option<String>,
+        action_executor: crate::domain::actions::ActionExecutor,
     }
 
     let outcome = match state.lock() {
         Ok(guard) => {
             if !guard.config.value().enabled {
-                tracing::debug!("middle-button gesture ignored: app disabled");
+                tracing::debug!("pointer-button gesture ignored: app disabled");
                 return;
             }
             let tokens = guard.recognizer.recognize(&pts);
             let gesture_str = gesture::directions_to_string(&tokens);
 
             if gesture_str.is_empty() {
-                tracing::debug!("middle-button: no gesture tokens");
+                tracing::debug!("pointer-button: no gesture tokens");
                 MatchOutcome {
                     result: ExecutionResult {
                         matched: false,
@@ -342,13 +359,15 @@ fn process_gesture(
                         trigger: Some("middle_button".to_string()),
                     },
                     pending_action: None,
+                    action_executor: guard.actions.clone(),
                 }
             } else {
                 let gesture = normalize_gesture(&gesture_str);
                 let scope_n = normalize_scope(&scope);
+                let action_executor = guard.actions.clone();
                 let matched = guard
                     .rules
-                    .match_rule(guard.config.rules(), &scope_n, &gesture)
+                    .match_rule(guard.config.rules(), &scope_n, &button, &gesture)
                     .cloned();
                 drop(guard);
 
@@ -359,10 +378,12 @@ fn process_gesture(
                             scope = %scope_n,
                             rule = %rule.name,
                             action_type = %rule.action_type,
-                            "middle-button gesture matched"
+                            button = %button,
+                            "pointer-button gesture matched"
                         );
                         MatchOutcome {
                             pending_action: Some(rule.action_type.clone()),
+                            action_executor: action_executor.clone(),
                             result: ExecutionResult {
                                 matched: true,
                                 scope: scope_n,
@@ -379,10 +400,12 @@ fn process_gesture(
                         tracing::info!(
                             gesture = %gesture,
                             scope = %scope_n,
-                            "middle-button gesture: no matching rule"
+                            button = %button,
+                            "pointer-button gesture: no matching rule"
                         );
                         MatchOutcome {
                             pending_action: None,
+                            action_executor,
                             result: ExecutionResult {
                                 matched: false,
                                 scope: scope_n,
@@ -414,8 +437,7 @@ fn process_gesture(
     // Phase 3: execute the action (potentially slow osascript call).
     // Runs in this background thread — the CGEventTap callback already returned.
     if let Some(action_type) = outcome.pending_action {
-        let executor = ActionExecutor::new();
-        if let Err(e) = executor.execute_action_type(&action_type) {
+        if let Err(e) = outcome.action_executor.execute_action_type(&action_type) {
             tracing::warn!("action execution failed ({}): {}", action_type, e);
         }
     }

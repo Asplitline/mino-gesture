@@ -2,6 +2,41 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+fn builtin_actions() -> Vec<ActionConfig> {
+    vec![
+        ActionConfig {
+            id: "hotkey_mission_control".to_string(),
+            name: "Mission Control".to_string(),
+            kind: "hotkey".to_string(),
+            key_code: 126,
+            control: true,
+            option: false,
+            shift: false,
+            command: false,
+        },
+        ActionConfig {
+            id: "hotkey_switch_left".to_string(),
+            name: "Switch Space Left".to_string(),
+            kind: "hotkey".to_string(),
+            key_code: 123,
+            control: true,
+            option: false,
+            shift: false,
+            command: false,
+        },
+        ActionConfig {
+            id: "hotkey_switch_right".to_string(),
+            name: "Switch Space Right".to_string(),
+            kind: "hotkey".to_string(),
+            key_code: 124,
+            control: true,
+            option: false,
+            shift: false,
+            command: false,
+        },
+    ]
+}
+
 fn builtin_rules() -> Vec<RuleConfig> {
     vec![
         RuleConfig {
@@ -9,6 +44,7 @@ fn builtin_rules() -> Vec<RuleConfig> {
             name: "中键上滑 - Mission Control".to_string(),
             enabled: true,
             scope: "global".to_string(),
+            button: "middle".to_string(),
             gesture: "U".to_string(),
             action_type: "hotkey_mission_control".to_string(),
         },
@@ -17,6 +53,7 @@ fn builtin_rules() -> Vec<RuleConfig> {
             name: "中键左滑 - 左切换".to_string(),
             enabled: true,
             scope: "global".to_string(),
+            button: "middle".to_string(),
             gesture: "L".to_string(),
             action_type: "hotkey_switch_left".to_string(),
         },
@@ -25,18 +62,19 @@ fn builtin_rules() -> Vec<RuleConfig> {
             name: "中键右滑 - 右切换".to_string(),
             enabled: true,
             scope: "global".to_string(),
+            button: "middle".to_string(),
             gesture: "R".to_string(),
             action_type: "hotkey_switch_right".to_string(),
         },
     ]
 }
 
-fn ensure_builtin_rules(config: &mut AppConfig) -> bool {
+fn ensure_builtin_actions(config: &mut AppConfig) -> bool {
     let mut changed = false;
-    for rule in builtin_rules() {
-        let exists = config.rules.iter().any(|r| r.id == rule.id);
+    for action in builtin_actions() {
+        let exists = config.actions.iter().any(|a| a.id == action.id);
         if !exists {
-            config.rules.push(rule);
+            config.actions.push(action);
             changed = true;
         }
     }
@@ -46,6 +84,8 @@ fn ensure_builtin_rules(config: &mut AppConfig) -> bool {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
     pub enabled: bool,
+    #[serde(default = "builtin_actions")]
+    pub actions: Vec<ActionConfig>,
     #[serde(default)]
     pub rules: Vec<RuleConfig>,
 }
@@ -54,9 +94,28 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             enabled: true,
+            actions: builtin_actions(),
             rules: builtin_rules(),
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActionConfig {
+    pub id: String,
+    pub name: String,
+    /// Supported kinds: hotkey
+    pub kind: String,
+    pub key_code: u16,
+    #[serde(default)]
+    pub control: bool,
+    #[serde(default)]
+    pub option: bool,
+    #[serde(default)]
+    pub shift: bool,
+    #[serde(default)]
+    pub command: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,8 +125,14 @@ pub struct RuleConfig {
     pub name: String,
     pub enabled: bool,
     pub scope: String,
+    #[serde(default = "default_rule_button")]
+    pub button: String,
     pub gesture: String,
     pub action_type: String,
+}
+
+fn default_rule_button() -> String {
+    "middle".to_string()
 }
 
 #[derive(Debug, Clone)]
@@ -81,7 +146,7 @@ impl ConfigStore {
         let path = base_dir.join("config.toml");
         if !path.exists() {
             let mut value = AppConfig::default();
-            ensure_builtin_rules(&mut value);
+            ensure_builtin_actions(&mut value);
             let store = Self {
                 path,
                 value,
@@ -92,7 +157,7 @@ impl ConfigStore {
 
         let raw = fs::read_to_string(&path)?;
         let mut value = toml::from_str::<AppConfig>(&raw).unwrap_or_default();
-        let changed = ensure_builtin_rules(&mut value);
+        let changed = ensure_builtin_actions(&mut value);
         let store = Self { path, value };
         if changed {
             store.save()?;
@@ -128,6 +193,10 @@ impl ConfigStore {
         let before = self.value.rules.len();
         self.value.rules.retain(|r| r.id != id);
         before != self.value.rules.len()
+    }
+
+    pub fn reset_rules_to_builtin(&mut self) {
+        self.value.rules = builtin_rules();
     }
 
     pub fn path(&self) -> &Path {
