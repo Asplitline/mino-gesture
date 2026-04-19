@@ -67,11 +67,12 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
   {
     id: "changelog",
     label: "更新日志",
-    description: "最近变更记录",
+    description: "功能与修复",
     icon: IconSettings,
     eyebrow: "Changelog",
     title: "更新日志",
-    panelDescription: "当前版本阶段的主要改动。",
+    panelDescription:
+      "正文来自根目录 CHANGELOG.md，按「功能 / 修复」记录版本变更；维护方式见 docs/CHANGELOG_GENERATION.md。",
     render: () => <ChangelogSection />,
   },
 ];
