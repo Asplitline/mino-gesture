@@ -218,6 +218,9 @@ The frontend should be intentionally minimal.
 
 ### Frontend principles
 - no complex routing needed
+- shared component or shared interaction pattern should be lifted into the nearest top-level reusable component/module
+- page-specific or feature-specific implementation should stay colocated next to that page or feature instead of being promoted globally
+- file splitting follows responsibility and reuse boundaries, not file length alone
 - no giant global store unless clearly necessary
 - avoid a dashboard mentality
 - design for one compact app window
