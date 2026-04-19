@@ -21,8 +21,13 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
   const scale = svgW / totalW;
 
   return (
-    <div className="soft-card p-4">
-      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="block mx-auto" style={{ maxWidth: "100%" }}>
+    <section className="rounded-[18px] border border-border/75 bg-[rgba(255,255,255,0.82)] shadow-[0_1px_0_rgba(255,255,255,0.72),0_10px_24px_rgba(36,48,83,0.04)]">
+      <div className="border-b border-border/70 px-4 py-3">
+        <p className="text-sm font-semibold tracking-[-0.01em] text-foreground">屏幕布局</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">当前识别手势时使用的显示器排列。</p>
+      </div>
+      <div className="px-4 py-4">
+      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="mx-auto block" style={{ maxWidth: "100%" }}>
         {screens.map((s, i) => {
           const x = (s.x - minX) * scale;
           const y = (s.y - minY) * scale;
@@ -38,8 +43,8 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
                 height={h}
                 rx={4}
                 ry={4}
-                fill={isActive ? "rgba(111,99,246,0.18)" : "rgba(169,197,255,0.2)"}
-                stroke={isActive ? "rgb(111,99,246)" : "rgba(120,130,160,0.44)"}
+                fill={isActive ? "rgba(111,99,246,0.12)" : "rgba(226,231,240,0.58)"}
+                stroke={isActive ? "rgba(111,99,246,0.88)" : "rgba(120,130,160,0.32)"}
                 strokeWidth={isActive ? 2 : 1}
               />
               <text
@@ -49,7 +54,7 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
                 dominantBaseline="middle"
                 fontSize={Math.max(11, Math.min(18, h * 0.3))}
                 fontWeight="700"
-                fill={isActive ? "rgb(42,49,71)" : "rgb(154,163,186)"}
+                fill={isActive ? "rgb(42,49,71)" : "rgb(113,123,145)"}
               >
                 {i + 1}
               </text>
@@ -60,7 +65,7 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fontSize={Math.max(8, Math.min(11, h * 0.18))}
-                  fill={isActive ? "rgb(105,113,137)" : "rgb(154,163,186)"}
+                  fill={isActive ? "rgb(105,113,137)" : "rgb(138,146,165)"}
                 >
                   {s.name.length > 14 ? `${s.name.slice(0, 13)}…` : s.name}
                 </text>
@@ -69,6 +74,7 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
           );
         })}
       </svg>
-    </div>
+      </div>
+    </section>
   );
 }
