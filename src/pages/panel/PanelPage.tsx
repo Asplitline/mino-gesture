@@ -9,11 +9,12 @@ import {
 } from "../../gesture";
 import { hotkeySnapshotToKeyLabels } from "../../lib/macKeyboard";
 import type { MouseButtonValue } from "../../types/app";
-import { GestureLogOverlay, IconScrollText } from "../../components/GestureLogOverlay";
-import { GestureRuleCard } from "../../components/GestureRuleCard";
-import { KeybindingRecorder } from "../../components/KeybindingRecorder";
-import { ResultSection } from "../../components/ResultSection";
-import { ScreenMap } from "../../components/ScreenMap";
+import { GestureLogOverlay } from "./components/GestureLogOverlay";
+import { GestureRuleCard } from "./components/GestureRuleCard";
+import { KeybindingRecorder } from "./components/KeybindingRecorder";
+import { ResultSection } from "./components/ResultSection";
+import { ScreenMap } from "./components/ScreenMap";
+import { IconScrollText } from "../../components/icons";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";

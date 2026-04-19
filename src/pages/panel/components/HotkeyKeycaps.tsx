@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import type { ActionHotkeySnapshot } from "../types/app";
-import { hotkeySnapshotToKeyLabels } from "../lib/macKeyboard";
-import { cn } from "../lib/utils";
+import type { ActionHotkeySnapshot } from "../../../types/app";
+import { hotkeySnapshotToKeyLabels } from "../../../lib/macKeyboard";
+import { cn } from "../../../lib/utils";
 
 /** 单颗键帽外观，可与 {@link KeycapRow} 组合 */
 export const keycapClass =

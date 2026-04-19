@@ -1,8 +1,8 @@
-import type { TimedGestureResult } from "../types/app";
-import { cn } from "../lib/utils";
-import { IconScrollText } from "./icons";
-import { Button } from "./ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import type { TimedGestureResult } from "../../../types/app";
+import { cn } from "../../../lib/utils";
+import { IconScrollText } from "../../../components/icons";
+import { Button } from "../../../components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../../components/ui/dialog";
 
 function formatLogTime(at: number) {
   try {
@@ -95,5 +95,3 @@ function LogRow({ entry }: { entry: TimedGestureResult }) {
     </li>
   );
 }
-
-export { IconScrollText };

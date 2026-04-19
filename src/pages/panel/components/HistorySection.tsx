@@ -1,5 +1,5 @@
-import { parseGestureArrows } from "../gesture";
-import type { GestureResult } from "../types/app";
+import { parseGestureArrows } from "../../../gesture";
+import type { GestureResult } from "../../../types/app";
 
 export function HistorySection({
   history,

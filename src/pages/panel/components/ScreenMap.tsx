@@ -1,4 +1,4 @@
-import type { ScreenInfo } from "../types/app";
+import type { ScreenInfo } from "../../../types/app";
 
 export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; activeIndex: number }) {
   if (screens.length === 0) return null;

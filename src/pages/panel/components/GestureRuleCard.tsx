@@ -2,14 +2,14 @@ import {
   BUTTON_OPTIONS,
   formatGestureTriggerLabelZh,
   parseGestureArrows,
-} from "../gesture";
-import { cn } from "../lib/utils";
-import type { ActionConfig, RuleConfig } from "../types/app";
-import { IconPencil, IconTrash } from "./icons";
+} from "../../../gesture";
+import { cn } from "../../../lib/utils";
+import type { ActionConfig, RuleConfig } from "../../../types/app";
+import { IconPencil, IconTrash } from "../../../components/icons";
 import { KeycapRow, keycapClass } from "./HotkeyKeycaps";
-import { Button } from "./ui/button";
-import { Card, CardContent } from "./ui/card";
-import { Switch } from "./ui/switch";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent } from "../../../components/ui/card";
+import { Switch } from "../../../components/ui/switch";
 
 export type GestureRuleCardProps = {
   rule: RuleConfig;
@@ -67,7 +67,7 @@ export function GestureRuleCard({
           </div>
         </div>
 
-        <div className="mt-2.5 border-t border-[hsl(var(--border)/0.72)]">
+        <div className="mt-2.5 border-t border-[hsl(var(--border)/0.22)]">
           <div className="flex items-center gap-3 py-2.5 text-[0.82rem]">
             <span className="shrink-0 font-medium text-[hsl(var(--foreground)/0.9)]">手势</span>
             <span className="text-[hsl(var(--foreground)/0.22)]" aria-hidden>
@@ -77,7 +77,7 @@ export function GestureRuleCard({
               {gestureDetail}
             </span>
           </div>
-          <div className="border-t border-[hsl(var(--border)/0.72)]" />
+          <div className="border-t border-[hsl(var(--border)/0.22)]" />
           <div className="flex flex-wrap items-center gap-3 py-2.5 text-[0.82rem]">
             <span className="shrink-0 font-medium text-[hsl(var(--foreground)/0.9)]">热键</span>
             <span className="text-[hsl(var(--foreground)/0.22)]" aria-hidden>
@@ -102,7 +102,7 @@ export function GestureRuleCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-[hsl(var(--border)/0.72)] pt-2.5">
+        <div className="flex items-center justify-between gap-3 border-t border-[hsl(var(--border)/0.22)] pt-2.5">
           <div className="flex min-w-0 items-center gap-2">
             <Switch
               checked={rule.enabled}

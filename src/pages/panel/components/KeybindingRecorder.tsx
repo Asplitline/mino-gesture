@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ActionHotkeySnapshot } from "../types/app";
+import type { ActionHotkeySnapshot } from "../../../types/app";
 import {
   buildHotkeySnapshot,
   keyboardEventToHotkeySnapshot,
   keyboardEventToMainKeyCode,
-} from "../lib/macKeyboard";
-import { cn } from "../lib/utils";
-import { IconClear } from "./icons";
+} from "../../../lib/macKeyboard";
+import { cn } from "../../../lib/utils";
+import { IconClear } from "../../../components/icons";
 import { HotkeyKeycapSequence } from "./HotkeyKeycaps";
 
 type KeybindingRecorderProps = {
