@@ -1,17 +1,19 @@
 import { parseGestureArrows } from "../../../gesture";
 import type { GestureResult } from "../../../types/app";
+import { Badge } from "../../../components/ui/badge";
+import { Card, CardContent, CardHeader } from "../../../components/ui/card";
 
 export function ResultSection({ lastResult }: { lastResult: GestureResult | null }) {
   const gestureArrows = lastResult?.gesture ? parseGestureArrows(lastResult.gesture) : [];
 
   return (
-    <section className="app-panel-surface rounded-[18px]">
-      <div className="border-b border-border/70 px-4 py-3">
+    <Card className="app-panel-surface rounded-[18px]">
+      <CardHeader className="border-b border-border/70 px-4 py-3">
         <p className="text-sm font-semibold tracking-[-0.01em] text-foreground">最近识别</p>
         <p className="text-xs text-muted-foreground">确认刚才的手势是否匹配到规则。</p>
-      </div>
+      </CardHeader>
       {lastResult ? (
-        <div className="space-y-3 px-4 py-3.5">
+        <CardContent className="space-y-3 px-4 py-3.5 pt-3.5">
           {gestureArrows.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               {gestureArrows.map((arrow, i) => (
@@ -25,25 +27,19 @@ export function ResultSection({ lastResult }: { lastResult: GestureResult | null
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-md px-2 py-1 text-xs font-medium ${
-                lastResult.matched
-                  ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
+            <Badge variant={lastResult.matched ? "success" : "muted"}>
               {lastResult.matched ? "已匹配规则" : "未匹配规则"}
-            </span>
+            </Badge>
             {lastResult.ruleName && <span className="text-xs text-foreground/75">{lastResult.ruleName}</span>}
             <span className="ml-auto text-xs text-muted-foreground">{lastResult.scope}</span>
           </div>
           {lastResult.message && <p className="text-xs leading-relaxed text-muted-foreground">{lastResult.message}</p>}
-        </div>
+        </CardContent>
       ) : (
-        <div className="px-4 py-5">
+        <CardContent className="px-4 py-5">
           <p className="text-sm text-muted-foreground">创建规则后，在任意位置按住中键或右键并移动鼠标即可测试。</p>
-        </div>
+        </CardContent>
       )}
-    </section>
+    </Card>
   );
 }

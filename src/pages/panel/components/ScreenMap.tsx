@@ -1,4 +1,5 @@
 import type { ScreenInfo } from "../../../types/app";
+import { Card, CardContent, CardHeader } from "../../../components/ui/card";
 
 export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; activeIndex: number }) {
   if (screens.length === 0) return null;
@@ -21,12 +22,12 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
   const scale = svgW / totalW;
 
   return (
-    <section className="app-panel-surface rounded-[18px]">
-      <div className="border-b border-border/70 px-4 py-3">
+    <Card className="app-panel-surface rounded-[18px]">
+      <CardHeader className="border-b border-border/70 px-4 py-3">
         <p className="text-sm font-semibold tracking-[-0.01em] text-foreground">屏幕布局</p>
         <p className="text-xs text-muted-foreground">当前识别手势时使用的显示器排列。</p>
-      </div>
-      <div className="px-4 py-4">
+      </CardHeader>
+      <CardContent className="px-4 py-4 pt-4">
       <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="mx-auto block" style={{ maxWidth: "100%" }}>
         {screens.map((s, i) => {
           const x = (s.x - minX) * scale;
@@ -74,7 +75,7 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
           );
         })}
       </svg>
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

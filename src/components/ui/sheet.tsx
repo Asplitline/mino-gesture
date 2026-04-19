@@ -70,15 +70,23 @@ const SheetHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-2 text-center sm:text-left", className)} {...props} />
+  <div className={cn("shrink-0 px-5 pb-3 pt-4 text-center sm:text-left", className)} {...props} />
 );
 SheetHeader.displayName = "SheetHeader";
+
+const SheetBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("min-h-0 flex-1 overflow-y-auto px-5 py-4", className)} {...props} />
+);
+SheetBody.displayName = "SheetBody";
 
 const SheetFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)} {...props} />
+  <div className={cn("shrink-0 px-5 pb-4 pt-3", className)} {...props} />
 );
 SheetFooter.displayName = "SheetFooter";
 
@@ -114,6 +122,7 @@ export {
   SheetClose,
   SheetContent,
   SheetHeader,
+  SheetBody,
   SheetFooter,
   SheetTitle,
   SheetDescription,
