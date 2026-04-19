@@ -70,7 +70,7 @@ export function PermissionsSection({
         }}
       />
       <div className="app-panel-subtle rounded-2xl px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-        授权后若状态没有立刻更新，通常需要完全重启应用。右上角刷新按钮会重新拉取检测结果。
+        授权后若状态没有立刻更新，通常需要完全重启应用。设置标题旁的刷新按钮会重新拉取检测结果。
       </div>
     </div>
   );

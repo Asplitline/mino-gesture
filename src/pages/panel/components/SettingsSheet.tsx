@@ -50,24 +50,26 @@ export function SettingsSheet({
         className="flex min-h-0 flex-col gap-0 bg-card p-0"
       >
         <SheetHeader className="border-b border-border/70">
-          <div className="flex items-start justify-between gap-3 pr-8">
-            <div>
-              <SheetTitle>设置</SheetTitle>
-              <SheetDescription>
-                偏好设置采用左侧菜单和右侧内容区，不再堆叠成长列表。
-              </SheetDescription>
+          <div className="pr-8">
+            <div className="flex items-center gap-1.5">
+              <SheetTitle className="mb-0">设置</SheetTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+                onClick={() => void settingsState.refreshSettings()}
+                disabled={settingsState.loading}
+                aria-label="刷新"
+              >
+                <IconRefreshCcw
+                  className={`h-4 w-4 ${settingsState.loading ? "animate-spin" : ""}`}
+                />
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 shrink-0"
-              onClick={() => void settingsState.refreshSettings()}
-              disabled={settingsState.loading}
-            >
-              <IconRefreshCcw
-                className={`h-4 w-4 ${settingsState.loading ? "animate-spin" : ""}`}
-              />
-            </Button>
+            <SheetDescription className="mt-1.5">
+              偏好设置采用左侧菜单和右侧内容区，不再堆叠成长列表。
+            </SheetDescription>
           </div>
         </SheetHeader>
         <SheetBody className="px-0 py-0">

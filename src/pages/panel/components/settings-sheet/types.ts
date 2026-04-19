@@ -6,8 +6,7 @@ export type SettingsSectionId =
   | "permissions"
   | "data"
   | "updates"
-  | "about"
-  | "changelog";
+  | "about";
 
 export type SettingsState = {
   settings: SettingsOverview | null;

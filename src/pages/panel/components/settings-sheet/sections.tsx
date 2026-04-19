@@ -6,7 +6,6 @@ import {
   IconShieldCheck,
 } from "../../../../components/icons";
 import { AboutSection } from "./AboutSection";
-import { ChangelogSection } from "./ChangelogSection";
 import { DataSection } from "./DataSection";
 import { GeneralSection } from "./GeneralSection";
 import { PermissionsSection } from "./PermissionsSection";
@@ -51,7 +50,8 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     icon: IconRefreshCcw,
     eyebrow: "Version",
     title: "版本与更新",
-    panelDescription: "查看当前版本，以及新版本的获取方式。",
+    panelDescription:
+      "查看当前版本、更新方式与变更记录（正文来自根目录 CHANGELOG.md；维护方式见 docs/CHANGELOG_GENERATION.md）。",
     render: (props) => <UpdatesSection {...props} />,
   },
   {
@@ -63,16 +63,5 @@ export const SETTINGS_SECTIONS: SettingsSectionDefinition[] = [
     title: "关于应用",
     panelDescription: "产品基础信息、作者和仓库地址。",
     render: (props) => <AboutSection {...props} />,
-  },
-  {
-    id: "changelog",
-    label: "更新日志",
-    description: "功能与修复",
-    icon: IconSettings,
-    eyebrow: "Changelog",
-    title: "更新日志",
-    panelDescription:
-      "正文来自根目录 CHANGELOG.md，按「功能 / 修复」记录版本变更；维护方式见 docs/CHANGELOG_GENERATION.md。",
-    render: () => <ChangelogSection />,
   },
 ];

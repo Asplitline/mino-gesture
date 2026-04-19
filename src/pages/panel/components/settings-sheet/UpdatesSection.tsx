@@ -1,6 +1,7 @@
 import { IconExternalLink } from "../../../../components/icons";
 import { Badge } from "../../../../components/ui/badge";
 import { Button } from "../../../../components/ui/button";
+import { ChangelogSection } from "./ChangelogSection";
 import type { SettingsSectionContentProps } from "./types";
 
 export function UpdatesSection({
@@ -51,6 +52,13 @@ export function UpdatesSection({
             查看 Releases
           </Button>
         </div>
+      </div>
+
+      <div className="space-y-3 border-t border-border/55 pt-4">
+        <h3 className="text-sm font-semibold tracking-[-0.01em] text-foreground">
+          更新日志
+        </h3>
+        <ChangelogSection />
       </div>
     </div>
   );

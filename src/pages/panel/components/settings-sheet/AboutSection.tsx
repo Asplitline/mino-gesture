@@ -23,7 +23,7 @@ export function AboutSection({
               </p>
             </div>
           </div>
-          <div className="grid gap-1 px-4 py-3 sm:grid-cols-[88px_minmax(0,1fr)] sm:items-baseline">
+          {/* <div className="grid gap-1 px-4 py-3 sm:grid-cols-[88px_minmax(0,1fr)] sm:items-baseline">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Author
             </p>
@@ -45,7 +45,7 @@ export function AboutSection({
                 </p>
               )}
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
       <div className="app-panel-surface rounded-2xl p-4">
