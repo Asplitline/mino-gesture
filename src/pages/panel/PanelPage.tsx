@@ -15,7 +15,7 @@ import { KeybindingRecorder } from "./components/KeybindingRecorder";
 import { ResultSection } from "./components/ResultSection";
 import { ScreenMap } from "./components/ScreenMap";
 import { PageLayout } from "../../components/layout/PageLayout";
-import { IconPlus, IconRotateCcw, IconScrollText } from "../../components/icons";
+import { IconPlus, IconRotateCcw } from "../../components/icons";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Select } from "../../components/ui/select";
@@ -62,32 +62,26 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-lg font-semibold tracking-[-0.02em] text-foreground">手势规则</h1>
-          <span className="rounded-full border border-border/75 bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          <button
+            type="button"
+            className="rounded-full border border-border/75 bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-accent-foreground"
+          >
             {filteredRules.length} 条规则
-          </span>
-          <span className="rounded-full border border-border/75 bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          </button>
+          <button
+            type="button"
+            className="rounded-full border border-border/75 bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-accent-foreground"
+            onClick={() => setLogOverlayOpen(true)}
+            aria-label={`查看识别日志，${gestureLog.length} 条`}
+            aria-haspopup="dialog"
+            aria-expanded={logOverlayOpen}
+          >
             {gestureLog.length} 条日志
-          </span>
+          </button>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">管理触发方式、快捷键映射和最近一次识别结果。</p>
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 gap-1.5 px-3"
-          onClick={() => setLogOverlayOpen(true)}
-          aria-label={`查看识别日志，${gestureLog.length} 条`}
-          aria-haspopup="dialog"
-          aria-expanded={logOverlayOpen}
-        >
-          <IconScrollText className="h-4 w-4 text-muted-foreground" />
-          识别日志
-          <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/12 px-1.5 text-[11px] font-semibold leading-none text-primary">
-            {gestureLog.length > 999 ? "999+" : gestureLog.length}
-          </span>
-        </Button>
         <Button
           type="button"
           variant="outline"
@@ -231,16 +225,6 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <section className="min-w-0 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-base font-semibold tracking-[-0.015em] text-foreground">规则列表</h2>
-              <p className="mt-0.5 text-sm text-muted-foreground">先创建规则，再按住中键或右键进行测试。</p>
-            </div>
-            <span className="rounded-full border border-border/80 bg-background/70 px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              {filteredRules.length} 条规则
-            </span>
-          </div>
-
           {rulesError && (
             <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {rulesError}
