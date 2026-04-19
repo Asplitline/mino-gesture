@@ -1,0 +1,52 @@
+# 在默认分支上预热 Cargo 缓存，供 tag 触发的 release-macos 工作流恢复。
+# GitHub Actions 缓存规则：tag 工作流可直接使用在 main 上保存的缓存，但无法使用其它 tag 上保存的缓存。
+name: rust-cache-warm-macos
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src-tauri/**"
+      - ".github/workflows/rust-cache-warm-macos.yml"
+      - ".github/workflows/release-macos.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-cache-warm-macos
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    runs-on: macos-latest
+    env:
+      CARGO_TERM_PROGRESS_WHEN: never
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+          shared-key: mino-gesture-macos-universal
+          add-job-id-key: false
+          cache-bin: false
+
+      # 必须与发版一致使用 release，否则只会预热 debug 产物，tag 构建几乎仍从零编 release 依赖
+      - name: Cargo check (release, macOS targets)
+        working-directory: src-tauri
+        run: |
+          cargo check --locked -q --release --target aarch64-apple-darwin
+          cargo check --locked -q --release --target x86_64-apple-darwin

@@ -15,10 +15,15 @@ concurrency:
 jobs:
   build-macos:
     runs-on: macos-latest
+    env:
+      # 减少 Cargo 进度条输出，略微降低 I/O（对总耗时影响很小，日志更干净）
+      CARGO_TERM_PROGRESS_WHEN: never
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -38,6 +43,10 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
+          # 与 rust-cache-warm-macos.yml 共用稳定 key：tag 发布可从 main 上预热的缓存恢复
+          shared-key: mino-gesture-macos-universal
+          add-job-id-key: false
+          cache-bin: false
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
