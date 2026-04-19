@@ -47,25 +47,21 @@ export function GestureLogOverlay({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex h-full flex-col sm:max-w-[540px]">
-        <SheetHeader className="shrink-0 gap-3 border-b border-border/70 px-5 py-4">
-          <div className="flex min-w-0 items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2">
-                <IconScrollText className="h-5 w-5 shrink-0 text-muted-foreground" />
-                <SheetTitle id="gesture-log-title">识别日志</SheetTitle>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-                  {entries.length}
-                </span>
-              </div>
-              <SheetDescription className="mt-1">查看最近的手势识别结果、命中状态和执行反馈。</SheetDescription>
-            </div>
-            <Button type="button" variant="ghost" size="sm" className="h-8 shrink-0" onClick={() => onOpenChange(false)}>
-              关闭
-            </Button>
+      <SheetContent
+        side="right"
+        className="flex min-h-0 h-auto max-h-[calc(100vh-1.5rem)] flex-col rounded-l-[24px] p-0 sm:top-3 sm:bottom-3 sm:max-w-[540px]"
+      >
+        <SheetHeader className="shrink-0 border-b border-border/70 px-5 pb-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <IconScrollText className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <SheetTitle id="gesture-log-title">识别日志</SheetTitle>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">{entries.length}</span>
           </div>
+          <SheetDescription>查看最近的手势识别结果、命中状态和执行反馈。</SheetDescription>
+        </SheetHeader>
 
-          <div className="grid grid-cols-3 gap-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          <div className="mb-4 grid grid-cols-3 gap-2">
             <SummaryCard label="已匹配" value={matchedCount} tone="success" />
             <SummaryCard label="执行失败" value={failedCount} tone={failedCount > 0 ? "danger" : "neutral"} />
             <SummaryCard
@@ -74,9 +70,7 @@ export function GestureLogOverlay({
               tone="neutral"
             />
           </div>
-        </SheetHeader>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {entries.length === 0 ? (
             <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-muted/20 px-6 text-center">
               <IconScrollText className="h-10 w-10 text-muted-foreground/65" />
@@ -95,15 +89,15 @@ export function GestureLogOverlay({
         </div>
 
         <SheetFooter className="shrink-0 border-t border-border/70 px-5 py-3">
-          <div className="flex w-full items-center justify-between gap-2">
+          <div className="flex w-full items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">仅保留最近 500 条识别记录。</p>
             <div className="flex items-center gap-2">
+              <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => onOpenChange(false)}>
+                关闭
+              </Button>
               <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={onClear} disabled={entries.length === 0}>
                 <IconClear className="h-4 w-4" />
                 清空日志
-              </Button>
-              <Button type="button" variant="ghost" size="sm" className="h-8" onClick={() => onOpenChange(false)}>
-                关闭
               </Button>
             </div>
           </div>

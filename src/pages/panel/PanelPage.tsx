@@ -158,13 +158,16 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
       />
 
       <Sheet open={ruleFormOpen} onOpenChange={(open) => !open && closeRuleForm()}>
-        <SheetContent side="right" className="flex h-full flex-col sm:max-w-[440px]">
-          <div className="flex min-h-0 flex-1 flex-col px-5 py-4">
-            <SheetHeader className="border-b border-border/70 pb-3">
+        <SheetContent
+          side="right"
+          className="flex min-h-0 h-auto max-h-[calc(100vh-1.5rem)] flex-col rounded-l-[24px] p-0 sm:top-3 sm:bottom-3 sm:max-w-[440px]"
+        >
+          <div className="flex min-h-0 flex-1 flex-col py-4">
+            <SheetHeader className="border-b border-border/70 px-5 pb-3">
               <SheetTitle>{editingRuleId ? "编辑规则" : "新建规则"}</SheetTitle>
               <SheetDescription>设置触发按键、滑动方向和需要执行的快捷键。</SheetDescription>
             </SheetHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto py-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
               <div className="space-y-3.5">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
@@ -213,7 +216,7 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
                 </div>
               </div>
             </div>
-            <SheetFooter className="border-t border-border/70 pt-3">
+            <SheetFooter className="mt-1 border-t border-border/70 px-5 pt-3">
               <div className="flex w-full justify-end gap-2">
                 <Button variant="outline" onClick={() => closeRuleForm()} disabled={formBusy}>
                   取消
