@@ -1,4 +1,3 @@
-import type { SVGProps } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ActionHotkeySnapshot } from "../types/app";
 import {
@@ -7,6 +6,7 @@ import {
   keyboardEventToMainKeyCode,
 } from "../lib/macKeyboard";
 import { cn } from "../lib/utils";
+import { IconClear } from "./icons";
 import { HotkeyKeycapSequence } from "./HotkeyKeycaps";
 
 type KeybindingRecorderProps = {
@@ -25,15 +25,6 @@ const emptyMods: ModState = {
   shift: false,
   control: false,
 };
-
-function IconClear(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden {...props}>
-      <path d="M18 6 6 18" />
-      <path d="m6 6 12 12" />
-    </svg>
-  );
-}
 
 function captureFieldClass(active: boolean, disabled?: boolean) {
   return cn(

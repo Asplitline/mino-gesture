@@ -1,21 +1,8 @@
-import type { SVGProps } from "react";
 import type { TimedGestureResult } from "../types/app";
 import { cn } from "../lib/utils";
+import { IconScrollText } from "./icons";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-
-function IconScrollText(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
-      <path d="M8 6h13" />
-      <path d="M8 12h13" />
-      <path d="M8 18h13" />
-      <path d="M3 6h.01" />
-      <path d="M3 12h.01" />
-      <path d="M3 18h.01" />
-    </svg>
-  );
-}
 
 function formatLogTime(at: number) {
   try {
