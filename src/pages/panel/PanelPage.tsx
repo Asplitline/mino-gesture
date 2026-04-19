@@ -18,7 +18,7 @@ import { PageLayout } from "../../components/layout/PageLayout";
 import { IconPlus, IconRotateCcw } from "../../components/icons";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { Select } from "../../components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "../../components/ui/sheet";
 import { useGesturePanelState } from "./useGesturePanelState";
 
@@ -173,28 +173,32 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">触发按键</p>
-                    <Select
-                      value={draft.button}
-                      onChange={(e) => setDraft((prev) => ({ ...prev, button: e.target.value as MouseButtonValue }))}
-                    >
-                      {BUTTON_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
+                    <Select value={draft.button} onValueChange={(value) => setDraft((prev) => ({ ...prev, button: value as MouseButtonValue }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {BUTTON_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground">滑动方向</p>
-                    <Select
-                      value={draft.gesture.toUpperCase()}
-                      onChange={(e) => setDraft((prev) => ({ ...prev, gesture: e.target.value.toUpperCase() }))}
-                    >
-                      {GESTURE_OPTIONS.map((g) => (
-                        <option key={g} value={g}>
-                          {formatGestureSelectOption(g)}
-                        </option>
-                      ))}
+                    <Select value={draft.gesture.toUpperCase()} onValueChange={(value) => setDraft((prev) => ({ ...prev, gesture: value.toUpperCase() }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GESTURE_OPTIONS.map((g) => (
+                          <SelectItem key={g} value={g}>
+                            {formatGestureSelectOption(g)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                     </Select>
                     <p className="text-[11px] leading-snug text-muted-foreground">当前选择：{formatGestureTriggerLabelZh(draft.gesture)}</p>
                   </div>

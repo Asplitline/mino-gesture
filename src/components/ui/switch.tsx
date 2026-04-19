@@ -1,63 +1,26 @@
 import * as React from "react";
+import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { cn } from "../../lib/utils";
 
-interface SwitchProps {
-  checked: boolean;
-  onCheckedChange?: (checked: boolean) => void;
-  className?: string;
-  disabled?: boolean;
-  size?: "default" | "lg";
-  "aria-label"?: string;
-}
-
-const switchSizeClass = {
-  default: {
-    track: "h-5 w-9",
-    thumb: "h-4 w-4",
-    on: "translate-x-4",
-    off: "translate-x-0",
-  },
-  lg: {
-    track: "h-8 w-[4.25rem]",
-    thumb: "h-7 w-7",
-    on: "translate-x-[2.25rem]",
-    off: "translate-x-0.5",
-  },
-} as const;
-
-export function Switch({
-  checked,
-  onCheckedChange,
-  className,
-  disabled,
-  size = "default",
-  "aria-label": ariaLabel,
-}: SwitchProps) {
-  const sizeClass = switchSizeClass[size];
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      disabled={disabled}
-      onClick={() => onCheckedChange?.(!checked)}
+const Switch = React.forwardRef<
+  React.ElementRef<typeof SwitchPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <SwitchPrimitive.Root
+    ref={ref}
+    className={cn(
+      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
+      className,
+    )}
+    {...props}
+  >
+    <SwitchPrimitive.Thumb
       className={cn(
-        "inline-flex items-center rounded-full border border-transparent p-0.5 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
-        sizeClass.track,
-        checked
-          ? "bg-[hsl(var(--primary)/0.95)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
-          : "bg-[hsl(var(--muted)/0.95)] shadow-[inset_0_0_0_1px_rgba(15,23,42,0.04)]",
-        className,
+        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0",
       )}
-    >
-      <span
-        className={cn(
-          "pointer-events-none block rounded-full bg-[rgba(255,255,255,0.98)] shadow-[0_1px_2px_rgba(15,23,42,0.18)] ring-0 transition-transform duration-150",
-          sizeClass.thumb,
-          checked ? sizeClass.on : sizeClass.off,
-        )}
-      />
-    </button>
-  );
-}
+    />
+  </SwitchPrimitive.Root>
+));
+Switch.displayName = SwitchPrimitive.Root.displayName;
+
+export { Switch };
