@@ -64,13 +64,13 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
           <h1 className="text-lg font-semibold tracking-[-0.02em] text-foreground">手势规则</h1>
           <button
             type="button"
-            className="rounded-full border border-border/75 bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-accent-foreground"
+            className="app-panel-subtle rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-accent-foreground"
           >
             {filteredRules.length} 条规则
           </button>
           <button
             type="button"
-            className="rounded-full border border-border/75 bg-background/80 px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-accent-foreground"
+            className="app-panel-subtle rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-accent-foreground"
             onClick={() => setLogOverlayOpen(true)}
             aria-label={`查看识别日志，${gestureLog.length} 条`}
             aria-haspopup="dialog"
@@ -147,8 +147,8 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
       stickySidebar
       contentClassName="overflow-hidden"
       contentContainerClassName="py-5 xl:grid-cols-[minmax(0,1fr)_320px]"
-      headerClassName="border-b border-border/65 bg-background/78 backdrop-blur-[14px]"
-      footerClassName="border-t border-border/65 bg-background/82 backdrop-blur-[10px]"
+      headerClassName="app-chrome-surface border-b border-border/65"
+      footerClassName="app-chrome-surface border-t border-border/65"
     >
       <GestureLogOverlay
         open={logOverlayOpen}
@@ -203,7 +203,7 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-[11px] leading-snug text-muted-foreground">当前选择：{formatGestureTriggerLabelZh(draft.gesture)}</p>
+                    <p className="text-xs leading-snug text-muted-foreground">当前选择：{formatGestureTriggerLabelZh(draft.gesture)}</p>
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <p className="text-xs font-medium text-muted-foreground">执行快捷键</p>
@@ -239,19 +239,19 @@ export function PanelPage({ routeSearch, onIntentHandled }: PanelPageProps) {
           )}
 
           {rulesLoading ? (
-            <div className="rounded-[20px] border border-border/75 bg-[rgba(255,255,255,0.82)] px-4 py-8 text-sm text-muted-foreground shadow-[0_1px_0_rgba(255,255,255,0.72),0_10px_24px_rgba(36,48,83,0.04)]">
+            <div className="app-panel-surface rounded-[20px] px-4 py-8 text-sm text-muted-foreground">
               正在加载规则…
             </div>
           ) : filteredRules.length === 0 ? (
-            <div className="rounded-[20px] border border-border/75 bg-[rgba(255,255,255,0.82)] px-5 py-6 shadow-[0_1px_0_rgba(255,255,255,0.72),0_10px_24px_rgba(36,48,83,0.04)]">
+            <div className="app-panel-surface rounded-[20px] px-5 py-6">
               <p className="text-base font-semibold text-foreground">先创建第一条规则</p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                 这页的流程很简单：1. 新建规则；2. 录入快捷键；3. 按住中键或右键测试手势。
               </p>
               <div className="mt-4 grid gap-2 text-sm text-foreground/80 sm:grid-cols-3">
-                <div className="rounded-xl border border-border/70 bg-background/65 px-3 py-3">1. 选择触发按键和滑动方向</div>
-                <div className="rounded-xl border border-border/70 bg-background/65 px-3 py-3">2. 录入需要执行的快捷键</div>
-                <div className="rounded-xl border border-border/70 bg-background/65 px-3 py-3">3. 创建后在桌面上直接测试</div>
+                <div className="app-panel-subtle rounded-xl px-3 py-3">1. 选择触发按键和滑动方向</div>
+                <div className="app-panel-subtle rounded-xl px-3 py-3">2. 录入需要执行的快捷键</div>
+                <div className="app-panel-subtle rounded-xl px-3 py-3">3. 创建后在桌面上直接测试</div>
               </div>
             </div>
           ) : (

@@ -5,10 +5,10 @@ export function ResultSection({ lastResult }: { lastResult: GestureResult | null
   const gestureArrows = lastResult?.gesture ? parseGestureArrows(lastResult.gesture) : [];
 
   return (
-    <section className="rounded-[18px] border border-border/75 bg-[rgba(255,255,255,0.82)] shadow-[0_1px_0_rgba(255,255,255,0.72),0_10px_24px_rgba(36,48,83,0.04)]">
+    <section className="app-panel-surface rounded-[18px]">
       <div className="border-b border-border/70 px-4 py-3">
         <p className="text-sm font-semibold tracking-[-0.01em] text-foreground">最近识别</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">确认刚才的手势是否匹配到规则。</p>
+        <p className="text-xs text-muted-foreground">确认刚才的手势是否匹配到规则。</p>
       </div>
       {lastResult ? (
         <div className="space-y-3 px-4 py-3.5">
@@ -19,14 +19,14 @@ export function ResultSection({ lastResult }: { lastResult: GestureResult | null
                   {arrow}
                 </span>
               ))}
-              <span className="ml-1 rounded-md border border-border/80 bg-muted/35 px-2 py-0.5 font-mono text-[11px] text-foreground/75">
+              <span className="ml-1 rounded-md border border-border/80 bg-muted/35 px-2 py-0.5 font-mono text-xs text-foreground/75">
                 {lastResult.gesture}
               </span>
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
             <span
-              className={`rounded-md px-2 py-1 text-[11px] font-medium ${
+              className={`rounded-md px-2 py-1 text-xs font-medium ${
                 lastResult.matched
                   ? "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300"
                   : "bg-muted text-muted-foreground"
@@ -35,7 +35,7 @@ export function ResultSection({ lastResult }: { lastResult: GestureResult | null
               {lastResult.matched ? "已匹配规则" : "未匹配规则"}
             </span>
             {lastResult.ruleName && <span className="text-xs text-foreground/75">{lastResult.ruleName}</span>}
-            <span className="ml-auto text-[11px] text-muted-foreground">{lastResult.scope}</span>
+            <span className="ml-auto text-xs text-muted-foreground">{lastResult.scope}</span>
           </div>
           {lastResult.message && <p className="text-xs leading-relaxed text-muted-foreground">{lastResult.message}</p>}
         </div>

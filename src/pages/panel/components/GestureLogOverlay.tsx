@@ -72,7 +72,7 @@ export function GestureLogOverlay({
           </div>
 
           {entries.length === 0 ? (
-            <div className="flex h-full min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-muted/20 px-6 text-center">
+            <div className="app-panel-subtle flex h-full min-h-[220px] flex-col items-center justify-center rounded-2xl border-dashed px-6 text-center">
               <IconScrollText className="h-10 w-10 text-muted-foreground/65" />
               <p className="mt-4 text-sm font-medium text-foreground">暂无识别记录</p>
               <p className="mt-1 max-w-[26ch] text-sm leading-relaxed text-muted-foreground">
@@ -122,10 +122,10 @@ function SummaryCard({
         "rounded-xl border px-3 py-2",
         tone === "success" && "border-emerald-200/80 bg-emerald-500/8",
         tone === "danger" && "border-rose-200/80 bg-rose-500/8",
-        tone === "neutral" && "border-border/75 bg-muted/35",
+        tone === "neutral" && "app-panel-subtle",
       )}
     >
-      <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 text-sm font-semibold tabular-nums text-foreground">{value}</p>
     </div>
   );
@@ -137,7 +137,7 @@ function LogRow({ entry }: { entry: TimedGestureResult }) {
   const triggerLabel = formatTriggerLabel(entry.trigger);
 
   return (
-    <li className="rounded-2xl border border-border/75 bg-background/85 p-4 shadow-[0_10px_24px_rgba(36,48,83,0.05)]">
+    <li className="app-panel-surface rounded-2xl p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -147,7 +147,7 @@ function LogRow({ entry }: { entry: TimedGestureResult }) {
             <p className="text-sm font-medium text-foreground">{entry.ruleName || gestureLabel}</p>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <time className="tabular-nums" dateTime={new Date(entry.at).toISOString()}>
               {formatLogTime(entry.at)}
             </time>
@@ -158,18 +158,18 @@ function LogRow({ entry }: { entry: TimedGestureResult }) {
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-1">
-          <span
-            className={cn(
-              "rounded-full px-2 py-1 text-[11px] font-medium",
-              entry.matched ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "bg-muted text-muted-foreground",
-            )}
-          >
+            <span
+              className={cn(
+                "rounded-full px-2 py-1 text-xs font-medium",
+                entry.matched ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300" : "bg-muted text-muted-foreground",
+              )}
+            >
             {entry.matched ? "规则已命中" : "未命中规则"}
           </span>
           {entry.matched ? (
             <span
               className={cn(
-                "rounded-full px-2 py-1 text-[11px] font-medium",
+                "rounded-full px-2 py-1 text-xs font-medium",
                 entry.success ? "bg-sky-500/15 text-sky-800 dark:text-sky-300" : "bg-destructive/12 text-destructive",
               )}
             >

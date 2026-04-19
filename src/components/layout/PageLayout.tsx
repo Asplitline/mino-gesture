@@ -54,7 +54,7 @@ export function PageLayout({
   return (
     <div
       className={cn(
-        "min-h-screen bg-[linear-gradient(180deg,#f4f5f8_0%,#eef1f7_100%)]",
+        "app-page-surface min-h-screen",
         backgroundClassName,
       )}
     >

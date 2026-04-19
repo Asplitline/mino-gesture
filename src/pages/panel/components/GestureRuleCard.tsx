@@ -43,7 +43,7 @@ export function GestureRuleCard({
   const summaryLabel = `${buttonLabel} · ${gestureDetail}`;
   return (
     <Card
-      className="group overflow-hidden rounded-[20px] border border-[hsl(var(--border)/0.82)] bg-[rgba(255,255,255,0.82)] shadow-[0_1px_0_rgba(255,255,255,0.75),0_10px_26px_rgba(36,48,83,0.04)] backdrop-blur-[10px] transition-colors hover:border-[hsl(var(--border))] hover:bg-[rgba(255,255,255,0.9)]"
+      className="app-panel-surface app-panel-surface-interactive group overflow-hidden rounded-[20px] backdrop-blur-[10px]"
       role="article"
       aria-label={`${title}, ${summaryLabel}${stateHint}`}
     >
@@ -57,10 +57,10 @@ export function GestureRuleCard({
               {arrows || "·"}
             </div>
             <div className="min-w-0 pt-0.5">
-              <h3 className="line-clamp-2 text-[0.9rem] font-semibold tracking-[-0.015em] text-foreground">
+              <h3 className="line-clamp-2 text-sm font-semibold tracking-[-0.015em] text-foreground">
                 {title}
               </h3>
-              <p className="mt-0.5 text-[0.74rem] font-medium text-[hsl(var(--foreground)/0.58)]">
+              <p className="mt-0.5 text-xs font-medium text-[hsl(var(--foreground)/0.58)]">
                 {summaryLabel}
               </p>
             </div>
@@ -68,7 +68,7 @@ export function GestureRuleCard({
         </div>
 
         <div className="mt-2.5 border-t border-[hsl(var(--border)/0.22)]">
-          <div className="flex items-center gap-3 py-2.5 text-[0.82rem]">
+          <div className="flex items-center gap-3 py-2.5 text-sm">
             <span className="shrink-0 font-medium text-[hsl(var(--foreground)/0.9)]">手势</span>
             <span className="text-[hsl(var(--foreground)/0.22)]" aria-hidden>
               ·
@@ -78,7 +78,7 @@ export function GestureRuleCard({
             </span>
           </div>
           <div className="border-t border-[hsl(var(--border)/0.22)]" />
-          <div className="flex flex-wrap items-center gap-3 py-2.5 text-[0.82rem]">
+          <div className="flex flex-wrap items-center gap-3 py-2.5 text-sm">
             <span className="shrink-0 font-medium text-[hsl(var(--foreground)/0.9)]">热键</span>
             <span className="text-[hsl(var(--foreground)/0.22)]" aria-hidden>
               ·
@@ -93,7 +93,7 @@ export function GestureRuleCard({
               <span
                 className={cn(
                   keycapClass,
-                  "border-none bg-[hsl(var(--muted)/0.7)] px-2 py-0.5 text-[0.72rem] text-muted-foreground shadow-none",
+                  "border-none bg-[hsl(var(--muted)/0.7)] px-2 py-0.5 text-xs text-muted-foreground shadow-none",
                 )}
               >
                 未设置
@@ -111,7 +111,7 @@ export function GestureRuleCard({
               className="shadow-[inset_0_0_0_1px_rgba(255,255,255,0.14)]"
               aria-label="启用手势规则"
             />
-            <span className="text-[0.78rem] font-medium text-[hsl(var(--foreground)/0.72)]">
+            <span className="text-xs font-medium text-[hsl(var(--foreground)/0.72)]">
               {rule.enabled ? "已启用" : "已停用"}
             </span>
           </div>

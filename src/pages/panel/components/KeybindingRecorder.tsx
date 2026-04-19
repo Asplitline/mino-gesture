@@ -26,7 +26,7 @@ const emptyMods: ModState = {
 
 function captureFieldClass(active: boolean, disabled?: boolean) {
   return cn(
-    "flex min-h-[34px] flex-1 items-center rounded-l-lg border border-r-0 px-2 py-1 text-[11px] outline-none transition-[border-color,box-shadow,background-color]",
+    "flex min-h-[34px] flex-1 items-center rounded-l-lg border border-r-0 px-2 py-1 text-xs outline-none transition-[border-color,box-shadow,background-color]",
     active
       ? "border-primary/55 bg-primary/[0.06] ring-2 ring-primary/30 ring-offset-0 dark:bg-primary/[0.08] dark:ring-primary/35"
       : "border-border/80 bg-muted/25 dark:border-border/60 dark:bg-muted/20",
@@ -138,7 +138,7 @@ export function KeybindingRecorder({ value, onChange, disabled }: KeybindingReco
 
   const modifierButtonClass = (pressed: boolean) =>
     cn(
-      "min-w-[2.35rem] rounded-md border px-1.5 py-1 text-center text-[11px] font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+      "min-w-[2.35rem] rounded-md border px-1.5 py-1 text-center text-xs font-medium leading-tight transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
       pressed
         ? "border-primary/60 bg-primary/15 text-foreground shadow-sm dark:border-primary/50 dark:bg-primary/20"
         : "border-border/80 bg-background text-muted-foreground hover:border-border hover:bg-muted/40 hover:text-foreground dark:border-border/60 dark:bg-background/80",
@@ -238,7 +238,7 @@ export function KeybindingRecorder({ value, onChange, disabled }: KeybindingReco
             </button>
           )}
         </div>
-        <div className="flex items-center justify-between gap-3 text-[11px] leading-snug">
+        <div className="flex items-center justify-between gap-3 text-xs leading-snug">
           <p className="text-muted-foreground">按一次完整组合键即可；仅支持已映射键位，`Esc` 取消。</p>
           <button
             type="button"
@@ -253,11 +253,11 @@ export function KeybindingRecorder({ value, onChange, disabled }: KeybindingReco
       {manualOpen && (
         <div className="space-y-3 rounded-lg border border-border/70 bg-muted/15 p-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] font-medium text-muted-foreground">手动录入</p>
-            <p className="text-[11px] text-muted-foreground">适合部分组合键无法直接录制时使用</p>
+            <p className="text-xs font-medium text-muted-foreground">手动录入</p>
+            <p className="text-xs text-muted-foreground">适合部分组合键无法直接录制时使用</p>
           </div>
           <div>
-            <p className="mb-2 text-[11px] font-medium text-muted-foreground">修饰键（点选填入，再点可取消）</p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">修饰键（点选填入，再点可取消）</p>
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="修饰键">
               <button
                 type="button"
@@ -303,7 +303,7 @@ export function KeybindingRecorder({ value, onChange, disabled }: KeybindingReco
           </div>
 
           <div>
-            <p className="mb-2 text-[11px] font-medium text-muted-foreground">主键</p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">主键</p>
             <div
               className={cn(
                 "flex overflow-hidden rounded-lg border transition-[border-color,box-shadow]",
@@ -351,7 +351,7 @@ export function KeybindingRecorder({ value, onChange, disabled }: KeybindingReco
             </div>
           </div>
 
-          <p className="text-[11px] leading-snug text-muted-foreground">
+          <p className="text-xs leading-snug text-muted-foreground">
             先点选需要的修饰键，再聚焦主键区域按下一个普通键完成；仅支持已映射键位；Esc 取消主键录制并失焦。
           </p>
         </div>

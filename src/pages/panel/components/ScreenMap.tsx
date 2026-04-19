@@ -21,10 +21,10 @@ export function ScreenMap({ screens, activeIndex }: { screens: ScreenInfo[]; act
   const scale = svgW / totalW;
 
   return (
-    <section className="rounded-[18px] border border-border/75 bg-[rgba(255,255,255,0.82)] shadow-[0_1px_0_rgba(255,255,255,0.72),0_10px_24px_rgba(36,48,83,0.04)]">
+    <section className="app-panel-surface rounded-[18px]">
       <div className="border-b border-border/70 px-4 py-3">
         <p className="text-sm font-semibold tracking-[-0.01em] text-foreground">屏幕布局</p>
-        <p className="mt-0.5 text-xs text-muted-foreground">当前识别手势时使用的显示器排列。</p>
+        <p className="text-xs text-muted-foreground">当前识别手势时使用的显示器排列。</p>
       </div>
       <div className="px-4 py-4">
       <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="mx-auto block" style={{ maxWidth: "100%" }}>
