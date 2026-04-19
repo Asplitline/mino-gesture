@@ -1,13 +1,23 @@
 {
   "name": "mino-gesture",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "release:patch": "node ./scripts/version.mjs release patch",
+    "release:minor": "node ./scripts/version.mjs release minor",
+    "release:major": "node ./scripts/version.mjs release major",
+    "version:patch": "node ./scripts/version.mjs bump patch",
+    "version:minor": "node ./scripts/version.mjs bump minor",
+    "version:major": "node ./scripts/version.mjs bump major",
+    "version:set": "node ./scripts/version.mjs set",
+    "version:tag": "node ./scripts/version.mjs tag",
+    "version:sync": "node ./scripts/version.mjs sync",
+    "version": "node ./scripts/version.mjs sync && git add src-tauri/tauri.conf.json src-tauri/Cargo.toml"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
