@@ -1,189 +1,128 @@
 # mino-gesture
 
-A lightweight, beautiful macOS gesture app built with Tauri, Rust, and React.
+[中文说明](./README.zh-CN.md)
 
-mino-gesture is designed as a small, focused utility that improves everyday interactions through simple, reliable mouse gestures. It is not trying to become a giant automation platform or a complicated window manager. The goal is to make a few common actions feel faster, smoother, and more pleasant on macOS.
+mino-gesture is a lightweight mouse gesture utility for macOS, built with Tauri, Rust, React, and TypeScript.
 
-## What it is
+The project is intentionally narrow in scope: make a small set of frequent actions faster and easier, without turning into a large automation platform. The current version focuses on pointer-button drag gestures, hotkey execution, essential settings, and a compact configuration UI.
 
-mino-gesture listens for mouse gesture input, matches it against a small rule set, and triggers actions such as system shortcuts, app launches, or simple scripts.
+## Current Features
 
-The product direction is intentionally narrow:
+- Recognize gestures by holding the middle or right mouse button, dragging, and releasing.
+- Support `U / D / L / R` gestures and their combinations.
+- Ship with a small set of built-in starter rules:
+  - middle-button up for Mission Control
+  - middle-button left/right for switching Spaces
+  - right-button left/right for browser back/forward
+- Create, edit, enable, disable, delete, and reset rules.
+- Record custom hotkeys for each rule.
+- Show recent execution results and gesture logs.
+- Detect Accessibility and Input Monitoring permission status.
+- Support launch at login.
+- Let users choose whether closing the main window minimizes to tray or quits the app.
+- Show version info, update guidance, changelog, and project links inside Settings.
 
-- lightweight runtime
-- small app bundle
-- minimal and beautiful interface
-- modern architecture
-- clear feature boundaries
-- native-feeling macOS experience
+## Scope
 
-## Product direction
+The app is usable today, but its boundaries are deliberate:
 
-mino-gesture is built around the idea of **small and focused interaction enhancement**.
+- Hotkey execution is the primary action model right now.
+- The current product emphasizes global rules and built-in practical scenarios, not heavy automation.
+- Updates are currently installed manually from GitHub Releases; in-app auto-update is not enabled.
 
-The first version should solve a small number of practical workflows really well:
+If you are looking for a window manager, scripting platform, plugin system, or cross-platform input tool, this project is not trying to be that.
 
-- upward gesture to open Mission Control
-- left and right gestures to switch Spaces
-- browser-specific left and right gestures for back and forward
-- custom gestures mapped to hotkeys
-- simple app launch and script actions
+## Installation
 
-The product should feel like a polished macOS utility, not a dashboard.
+The recommended installation path is GitHub Releases:
 
-## Principles
+- Releases: <https://github.com/Asplitline/mino-gesture/releases>
 
-- Small and focused
-- Fast to open, fast to configure
-- Minimal UI, low cognitive load
-- Beautiful but restrained
-- Modern but dependency-light
-- Reliable over clever
+After downloading, move the app into `/Applications` and grant the required permissions on first launch.
 
-## Tech stack
+## Permissions
 
-### App shell
-- Tauri 2
-
-### Core
-- Rust
-- Rust 2024 edition
-
-### Frontend
-- React
-- TypeScript
-- Vite
-
-## Why this stack
-
-The stack is chosen to keep the product small and modern.
-
-- **Tauri** keeps the desktop shell lightweight.
-- **Rust** handles gesture listening, recognition, matching, and action execution.
-- **React** is only used for a thin settings UI.
-- **Vite** keeps frontend development fast and modern.
-
-The frontend should stay small. All high-frequency or system-level logic belongs in Rust.
-
-## Initial scope
-
-### Included in v1
-- mouse gesture recognition
-- right-button drag gestures
-- simple gesture patterns such as `U`, `D`, `L`, `R`, and small combinations
-- global rules
-- app-specific rule overrides
-- hotkey actions
-- open application actions
-- shell command actions
-- AppleScript actions
-- menu bar control
-- permissions guidance
-- launch at login
-
-### Explicitly out of scope for v1
-- trackpad multi-touch gestures
-- advanced window management
-- cloud sync
-- plugin system
-- analytics dashboard
-- heavy scripting workflows
-- multi-platform support
-
-## UX goals
-
-The user experience should feel:
-
-- instant
-- clean
-- quiet
-- obvious
-- low-friction
-
-The UI should avoid unnecessary pages, panels, tabs, and configuration noise.
-
-## Project structure
-
-```text
-src/
-  app/
-  pages/
-  components/
-  hooks/
-  styles/
-
-src-tauri/
-  src/
-    main.rs
-    input.rs
-    gesture.rs
-    rules.rs
-    actions.rs
-    config.rs
-    tray.rs
-```
-
-## Documentation
-
-- [PRD](./docs/PRD.md)
-- [Technical Design](./docs/TECH_DESIGN.md)
-
-## Development
-
-Use `pnpm` as the package manager.
-
-### Prerequisites (macOS)
-
-```bash
-# Rust toolchain (provides cargo)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Tauri native dependencies
-xcode-select --install
-```
-
-After installation, restart terminal and confirm:
-
-```bash
-cargo --version
-pnpm --version
-```
-
-### Commands
-
-```bash
-pnpm install
-pnpm build
-pnpm tauri dev
-```
-
-## Middle Button Gesture (current)
-
-Current real-time gesture listening is implemented for **middle mouse button only** on macOS:
-
-1. Hold middle button
-2. Move mouse to draw path
-3. Release middle button
-4. App recognizes gesture (`U/D/L/R` sequence), matches rules, and executes action
-
-### Permission requirement
-
-You must grant:
+mino-gesture requires these macOS permissions:
 
 - Accessibility
 - Input Monitoring
 
-Without these permissions, global mouse events may not be captured.
+Without them, the app may fail to capture global mouse events, and gestures will not work.
 
-### How to check what was recognized
+In development, permissions usually need to be granted to the host app that launches `pnpm tauri dev`, such as:
 
-- In the app UI, check Runtime -> last result
-- It shows recognized gesture, scope, matched rule, trigger source, and execution message
-- Trigger source:
-  - `middle_button`: real-time middle-button gesture
-  - `manual`: debug panel execution
-  - `probe`: foundation probe path
+- Terminal
+- iTerm
+- Cursor
+- VS Code
+
+For more details, see [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md).
+
+## Development
+
+### Requirements
+
+- macOS
+- Rust toolchain
+- pnpm
+- Xcode Command Line Tools
+
+### Install dependencies
+
+```bash
+pnpm install
+```
+
+### Common commands
+
+```bash
+pnpm tauri dev
+pnpm build
+pnpm tauri build
+```
+
+### Versioning and release
+
+```bash
+pnpm run release:patch
+pnpm run release:minor
+pnpm run release:major
+```
+
+See [docs/RELEASE.md](./docs/RELEASE.md) and [docs/CHANGELOG_GENERATION.md](./docs/CHANGELOG_GENERATION.md) for release and changelog conventions.
+
+## Configuration and Data
+
+The app stores its configuration in the macOS application support directory. On first launch it creates a default config with built-in actions and rules.
+
+The default rules currently cover:
+
+- Mission Control
+- Space switching
+- browser back / forward
+
+If you want to start over, you can reset rules back to the built-in set from Settings.
+
+## Tech Stack
+
+- Tauri 2
+- Rust
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+
+## Docs
+
+- [docs/CURRENT_FEATURES.md](./docs/CURRENT_FEATURES.md)
+- [docs/TECH_DESIGN.md](./docs/TECH_DESIGN.md)
+- [docs/DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md)
+- [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
+- [docs/RELEASE.md](./docs/RELEASE.md)
+- [docs/CHANGELOG_GENERATION.md](./docs/CHANGELOG_GENERATION.md)
 
 ## Status
 
-Milestone 1 foundation scaffold is in place.
+Current version: `0.1.5`
+
+The README is intended to describe what is already implemented, not long-range plans.
