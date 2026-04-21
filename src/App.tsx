@@ -61,7 +61,7 @@ export function App() {
       setCloseToTrayHintOpen(false);
       const window = getCurrentWebviewWindow();
       if (minimizeToTrayOnClose) {
-        await window.hide();
+        await invoke("hide_main_window_to_tray");
       } else {
         await window.close();
       }

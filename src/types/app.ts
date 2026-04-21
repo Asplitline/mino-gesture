@@ -38,6 +38,15 @@ export type ActionConfig = {
   command: boolean;
 };
 
+export type FrontmostAppInfo = {
+  name: string;
+  bundleId: string;
+};
+
+export type BindableAppInfo = FrontmostAppInfo & {
+  iconPath?: string | null;
+};
+
 /** 与后端 `ActionHotkeySnapshot` 一致，用于规则内联快捷键 */
 export type ActionHotkeySnapshot = {
   keyCode: number;
@@ -67,6 +76,7 @@ export type TimedGestureResult = GestureResult & { at: number };
 
 export type CreateRuleDraft = {
   name: string;
+  scopes: string[];
   button: MouseButtonValue;
   gesture: string;
   actionHotkey: ActionHotkeySnapshot | null;

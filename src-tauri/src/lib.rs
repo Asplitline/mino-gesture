@@ -27,14 +27,12 @@ pub fn run() {
     // 日志文件路径
     let log_dir = std::env::temp_dir().join("mino-gesture");
     let _ = std::fs::create_dir_all(&log_dir);
-    
-    tracing_subscriber::fmt()
-        .with_env_filter("info")
-        .init();
-    
+
+    tracing_subscriber::fmt().with_env_filter("info").init();
+
     tracing::info!("mino-gesture starting");
     tracing::info!("log directory: {:?}", log_dir);
-    
+
     // 设置 panic hook 写入崩溃日志
     let crash_log = log_dir.join("crash.log");
     let crash_log_clone = crash_log.clone();
@@ -99,7 +97,7 @@ pub fn run() {
                     return;
                 }
 
-                let _ = window.hide();
+                tray::hide_main_window_to_tray(window.app_handle());
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -107,6 +105,8 @@ pub fn run() {
             commands::get_settings_overview,
             commands::list_rules,
             commands::list_actions,
+            commands::get_frontmost_app,
+            commands::list_bindable_apps,
             commands::create_rule,
             commands::update_rule,
             commands::delete_rule,
@@ -115,6 +115,7 @@ pub fn run() {
             commands::set_minimize_to_tray_on_close,
             commands::dismiss_close_to_tray_hint,
             commands::remember_close_behavior_choice,
+            commands::hide_main_window_to_tray,
             commands::open_settings_target,
             commands::open_external,
             commands::set_enabled,

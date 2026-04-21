@@ -15,6 +15,7 @@ export type GestureRuleCardProps = {
   rule: RuleConfig;
   action: ActionConfig | undefined;
   triggerLabel: string;
+  scopeLabel: string;
   /** 已拆好的键位标签，与录制器键帽顺序一致；空数组表示无快捷键 */
   hotkeyLabels: string[];
   busy: boolean;
@@ -27,6 +28,7 @@ export function GestureRuleCard({
   rule,
   action,
   triggerLabel: _triggerLabel,
+  scopeLabel,
   hotkeyLabels,
   busy,
   onToggleEnabled,
@@ -75,6 +77,16 @@ export function GestureRuleCard({
             </span>
             <span className="min-w-0 truncate text-[hsl(var(--foreground)/0.62)]">
               {gestureDetail}
+            </span>
+          </div>
+          <div className="border-t border-[hsl(var(--border)/0.22)]" />
+          <div className="flex items-center gap-3 py-2.5 text-sm">
+            <span className="shrink-0 font-medium text-[hsl(var(--foreground)/0.9)]">范围</span>
+            <span className="text-[hsl(var(--foreground)/0.22)]" aria-hidden>
+              ·
+            </span>
+            <span className="min-w-0 truncate text-[hsl(var(--foreground)/0.62)]">
+              {scopeLabel}
             </span>
           </div>
           <div className="border-t border-[hsl(var(--border)/0.22)]" />

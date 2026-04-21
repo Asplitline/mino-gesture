@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   BUTTON_OPTIONS,
   formatGestureSelectOption,
@@ -8,7 +9,7 @@ import {
   formatHotkey,
 } from "../../gesture";
 import { hotkeySnapshotToKeyLabels } from "../../lib/macKeyboard";
-import type { MouseButtonValue } from "../../types/app";
+import type { BindableAppInfo, MouseButtonValue } from "../../types/app";
 import { GestureLogOverlay } from "./components/GestureLogOverlay";
 import { GestureRuleCard } from "./components/GestureRuleCard";
 import { KeybindingRecorder } from "./components/KeybindingRecorder";
@@ -30,6 +31,30 @@ type PanelPageProps = {
   onBackHome: () => void;
 };
 
+function appInitial(name: string) {
+  return (name.trim().charAt(0) || "?").toUpperCase();
+}
+
+function AppIcon({ app }: { app: BindableAppInfo }) {
+  const [failed, setFailed] = useState(false);
+  const src = app.iconPath && !failed ? convertFileSrc(app.iconPath) : null;
+
+  return (
+    <span className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-border/70 bg-[linear-gradient(145deg,hsl(var(--muted)),hsl(var(--background)))] text-xs font-semibold text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          className="size-full object-contain"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        appInitial(app.name)
+      )}
+    </span>
+  );
+}
+
 export function PanelPage({
   routeSearch,
   onIntentHandled,
@@ -46,6 +71,7 @@ export function PanelPage({
     closeRuleForm,
     submitRuleForm,
     formBusy,
+    bindableApps,
     lastResult,
     gestureLog,
     screens,
@@ -70,6 +96,34 @@ export function PanelPage({
     setSettingsOpen(false);
     closeRuleForm();
     onBackHome();
+  };
+
+  const appByBundleId = Object.fromEntries(bindableApps.map((app) => [app.bundleId, app]));
+  const selectedScopeSet = new Set(draft.scopes);
+  const selectedScopeLabels = draft.scopes.map((scope) => appByBundleId[scope]?.name ?? scope);
+  const scopeSummary = draft.scopes.length === 0
+    ? "全部 App 都会生效。"
+    : `只在 ${selectedScopeLabels.join("、")} 中生效。`;
+
+  const toggleScope = (bundleId: string) => {
+    setDraft((prev) => {
+      const exists = prev.scopes.includes(bundleId);
+      return {
+        ...prev,
+        scopes: exists
+          ? prev.scopes.filter((scope) => scope !== bundleId)
+          : [...prev.scopes, bundleId],
+      };
+    });
+  };
+
+  const formatRuleScope = (scope: string) => {
+    const scopes = scope
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (scopes.length === 0 || scopes.includes("global")) return "全部 App";
+    return scopes.map((item) => appByBundleId[item]?.name ?? item).join("、");
   };
 
   const header = (
@@ -197,7 +251,7 @@ export function PanelPage({
         >
           <SheetHeader className="border-b border-border/70">
             <SheetTitle>{editingRuleId ? "编辑规则" : "新建规则"}</SheetTitle>
-            <SheetDescription>设置触发按键、滑动方向和需要执行的快捷键。</SheetDescription>
+            <SheetDescription>设置生效范围、触发按键、滑动方向和需要执行的快捷键。</SheetDescription>
           </SheetHeader>
           <SheetBody>
             <div className="space-y-3.5">
@@ -220,6 +274,57 @@ export function PanelPage({
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-medium text-muted-foreground">生效范围</p>
+                    <p className="truncate text-xs text-muted-foreground">{scopeSummary}</p>
+                  </div>
+                  <button
+                    type="button"
+                    className={[
+                      "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition-colors",
+                      draft.scopes.length === 0
+                        ? "border-primary/45 bg-primary/[0.08] text-foreground"
+                        : "border-border/70 bg-muted/20 text-muted-foreground hover:border-border hover:bg-muted/35",
+                    ].join(" ")}
+                    onClick={() => setDraft((prev) => ({ ...prev, scopes: [] }))}
+                  >
+                    <span className="font-medium">全部 App</span>
+                    <span className="text-xs">{draft.scopes.length === 0 ? "默认" : "设为全部"}</span>
+                  </button>
+                  <div className="grid max-h-56 grid-cols-1 gap-2 overflow-y-auto rounded-xl border border-border/55 bg-muted/10 p-2 sm:grid-cols-2">
+                    {bindableApps.length === 0 ? (
+                      <div className="col-span-full rounded-lg bg-background/70 px-3 py-3 text-sm text-muted-foreground">
+                        暂未读取到可绑定 App，仍可使用“全部 App”。
+                      </div>
+                    ) : (
+                      bindableApps.map((app) => {
+                        const selected = selectedScopeSet.has(app.bundleId);
+                        return (
+                          <button
+                            key={app.bundleId}
+                            type="button"
+                            className={[
+                              "flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors",
+                              selected
+                                ? "border-primary/50 bg-primary/[0.08] text-foreground"
+                                : "border-transparent bg-background/70 text-muted-foreground hover:border-border/70 hover:text-foreground",
+                            ].join(" ")}
+                            onClick={() => toggleScope(app.bundleId)}
+                            aria-pressed={selected}
+                          >
+                            <AppIcon app={app} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-medium">{app.name}</span>
+                              <span className="block truncate text-[11px] text-muted-foreground">{app.bundleId}</span>
+                            </span>
+                            <span className="shrink-0 text-xs font-medium">{selected ? "已选" : ""}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">滑动方向</p>
@@ -315,6 +420,7 @@ export function PanelPage({
                     rule={rule}
                     action={action}
                     triggerLabel={triggerLabel}
+                    scopeLabel={formatRuleScope(rule.scope)}
                     hotkeyLabels={hotkeyLabels}
                     busy={busy}
                     onToggleEnabled={(enabled) => void saveRule({ ...rule, enabled })}

@@ -8,7 +8,11 @@ use crate::core::execution::{
 use crate::core::execution_result::ExecutionResult;
 use crate::core::state::AppState;
 use crate::domain::gesture::{self, Point};
+use crate::platform::tray;
 use serde::{Deserialize, Serialize};
+use std::collections::{hash_map::DefaultHasher, BTreeMap};
+use std::fs;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
@@ -72,6 +76,21 @@ pub struct UpdateStatusResponse {
 pub struct AboutResponse {
     pub author: String,
     pub github_url: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontmostAppResponse {
+    pub name: String,
+    pub bundle_id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BindableAppResponse {
+    pub name: String,
+    pub bundle_id: String,
+    pub icon_path: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -166,6 +185,131 @@ fn run_osascript(script: &str) -> Result<String, String> {
             stderr
         })
     }
+}
+
+fn frontmost_app_info() -> Result<Option<FrontmostAppResponse>, String> {
+    let script = r#"tell application "System Events"
+set frontApp to first application process whose frontmost is true
+set appName to name of frontApp
+set bundleId to bundle identifier of frontApp
+return appName & linefeed & bundleId
+end tell"#;
+    let output = run_osascript(script)?;
+    let mut lines = output.lines();
+    let name = lines.next().unwrap_or_default().trim().to_string();
+    let bundle_id = lines.next().unwrap_or_default().trim().to_string();
+    if name.is_empty() || bundle_id.is_empty() || bundle_id == "missing value" {
+        Ok(None)
+    } else {
+        Ok(Some(FrontmostAppResponse { name, bundle_id }))
+    }
+}
+
+fn plutil_extract_raw(info_plist: &Path, key: &str) -> Option<String> {
+    let output = Command::new("plutil")
+        .arg("-extract")
+        .arg(key)
+        .arg("raw")
+        .arg("-o")
+        .arg("-")
+        .arg(info_plist)
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if value.is_empty() || value == "missing value" {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn app_icon_source_path(app_path: &Path, info_plist: &Path) -> Option<PathBuf> {
+    let icon_file = plutil_extract_raw(info_plist, "CFBundleIconFile")?;
+    let icon_file = if Path::new(&icon_file).extension().is_some() {
+        icon_file
+    } else {
+        format!("{icon_file}.icns")
+    };
+    let icon_path = app_path.join("Contents").join("Resources").join(icon_file);
+    icon_path.exists().then_some(icon_path)
+}
+
+fn cached_png_icon_path(icon_path: &Path, bundle_id: &str) -> Option<String> {
+    let mut hasher = DefaultHasher::new();
+    icon_path.hash(&mut hasher);
+    bundle_id.hash(&mut hasher);
+    let cache_dir = std::env::temp_dir().join("mino-gesture").join("app-icons");
+    fs::create_dir_all(&cache_dir).ok()?;
+    let output_path = cache_dir.join(format!("{:x}.png", hasher.finish()));
+    if output_path.exists() {
+        return Some(output_path.display().to_string());
+    }
+
+    let status = Command::new("sips")
+        .arg("-s")
+        .arg("format")
+        .arg("png")
+        .arg(icon_path)
+        .arg("--out")
+        .arg(&output_path)
+        .status()
+        .ok()?;
+    if status.success() && output_path.exists() {
+        Some(output_path.display().to_string())
+    } else {
+        None
+    }
+}
+
+fn collect_apps_from_dir(dir: &Path, apps: &mut BTreeMap<String, BindableAppResponse>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let is_app = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("app"));
+
+        if is_app {
+            let info_plist = path.join("Contents").join("Info.plist");
+            let Some(bundle_id) = plutil_extract_raw(&info_plist, "CFBundleIdentifier") else {
+                continue;
+            };
+            let name = plutil_extract_raw(&info_plist, "CFBundleDisplayName")
+                .or_else(|| plutil_extract_raw(&info_plist, "CFBundleName"))
+                .or_else(|| path.file_stem().and_then(|stem| stem.to_str()).map(str::to_string))
+                .unwrap_or_else(|| bundle_id.clone());
+            let icon_path = app_icon_source_path(&path, &info_plist)
+                .and_then(|icon_path| cached_png_icon_path(&icon_path, &bundle_id));
+            apps.entry(bundle_id.clone())
+                .or_insert(BindableAppResponse {
+                    name,
+                    bundle_id,
+                    icon_path,
+                });
+        } else if path.is_dir() {
+            collect_apps_from_dir(&path, apps);
+        }
+    }
+}
+
+fn list_bindable_apps_info() -> Vec<BindableAppResponse> {
+    let mut apps = BTreeMap::new();
+    collect_apps_from_dir(Path::new("/Applications"), &mut apps);
+    collect_apps_from_dir(Path::new("/System/Applications"), &mut apps);
+    if let Some(home) = std::env::var_os("HOME") {
+        collect_apps_from_dir(&PathBuf::from(home).join("Applications"), &mut apps);
+    }
+
+    let mut apps: Vec<_> = apps.into_values().collect();
+    apps.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    apps
 }
 
 fn app_bundle_or_binary_path() -> Result<PathBuf, String> {
@@ -263,16 +407,15 @@ fn settings_overview(
             minimize_to_tray_on_close,
             show_close_to_tray_hint,
             message: if minimize_to_tray_on_close {
-                "关闭主窗口时会最小化到托盘。首次关闭会记住你的选择，后续可在这里修改。"
-                    .to_string()
+                "关闭主窗口时会最小化到托盘。首次关闭会记住你的选择，后续可在这里修改。".to_string()
             } else {
-                "关闭主窗口时会直接退出应用。首次关闭会记住你的选择，后续可在这里修改。"
-                    .to_string()
+                "关闭主窗口时会直接退出应用。首次关闭会记住你的选择，后续可在这里修改。".to_string()
             },
         },
         updates: UpdateStatusResponse {
             auto_update_enabled: false,
-            message: "当前版本未接入内置自动更新，可通过 GitHub Releases 手动安装新版本。".to_string(),
+            message: "当前版本未接入内置自动更新，可通过 GitHub Releases 手动安装新版本。"
+                .to_string(),
             releases_url: GITHUB_RELEASES_URL.to_string(),
         },
         about: AboutResponse {
@@ -327,6 +470,16 @@ pub fn list_rules(state: State<'_, Arc<Mutex<AppState>>>) -> Result<Vec<RuleConf
 pub fn list_actions(state: State<'_, Arc<Mutex<AppState>>>) -> Result<Vec<ActionConfig>, String> {
     let guard = state.lock().map_err(|e| e.to_string())?;
     Ok(guard.actions.list_actions())
+}
+
+#[tauri::command]
+pub fn get_frontmost_app() -> Result<Option<FrontmostAppResponse>, String> {
+    frontmost_app_info()
+}
+
+#[tauri::command]
+pub fn list_bindable_apps() -> Result<Vec<BindableAppResponse>, String> {
+    Ok(list_bindable_apps_info())
 }
 
 #[tauri::command]
@@ -482,9 +635,7 @@ pub fn set_minimize_to_tray_on_close(
 }
 
 #[tauri::command]
-pub fn dismiss_close_to_tray_hint(
-    state: State<'_, Arc<Mutex<AppState>>>,
-) -> Result<(), String> {
+pub fn dismiss_close_to_tray_hint(state: State<'_, Arc<Mutex<AppState>>>) -> Result<(), String> {
     let mut guard = state.lock().map_err(|e| e.to_string())?;
     guard.config.dismiss_close_to_tray_hint();
     guard.config.save().map_err(|e| e.to_string())
@@ -510,10 +661,19 @@ pub fn remember_close_behavior_choice(
 }
 
 #[tauri::command]
+pub fn hide_main_window_to_tray(app: AppHandle) {
+    tray::hide_main_window_to_tray(&app);
+}
+
+#[tauri::command]
 pub fn open_settings_target(target: String) -> Result<(), String> {
     let url = match target.as_str() {
-        "accessibility" => "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility",
-        "input-monitoring" => "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent",
+        "accessibility" => {
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+        }
+        "input-monitoring" => {
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
+        }
         "login-items" => "x-apple.systempreferences:com.apple.LoginItems-Settings.extension",
         _ => return Err(format!("unsupported settings target: {target}")),
     };

@@ -28,7 +28,7 @@ impl RuleEngine {
             .iter()
             .find(|r| {
                 r.enabled
-                    && r.scope == normalized_scope
+                    && scope_matches(&r.scope, normalized_scope)
                     && r.button == normalized_button
                     && r.gesture == normalized_gesture
             })
@@ -41,4 +41,11 @@ impl RuleEngine {
                 })
             })
     }
+}
+
+fn scope_matches(rule_scope: &str, current_scope: &str) -> bool {
+    rule_scope
+        .split(',')
+        .map(str::trim)
+        .any(|scope| !scope.is_empty() && scope == current_scope)
 }

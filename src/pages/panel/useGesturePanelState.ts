@@ -3,8 +3,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
   ActionConfig,
+  BindableAppInfo,
   CreateRuleDraft,
   GestureResult,
+  FrontmostAppInfo,
   RuleConfig,
   ScreenInfo,
   ActionHotkeySnapshot,
@@ -21,6 +23,19 @@ function actionConfigToHotkeySnapshot(a: ActionConfig): ActionHotkeySnapshot {
     shift: a.shift,
     command: a.command,
   };
+}
+
+function scopeStringToDraftScopes(scope: string): string[] {
+  const scopes = scope
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return scopes.length > 0 && !scopes.includes("global") ? scopes : [];
+}
+
+function draftScopesToScopeString(scopes: string[]): string {
+  const uniqueScopes = Array.from(new Set(scopes.map((item) => item.trim()).filter(Boolean)));
+  return uniqueScopes.length > 0 ? uniqueScopes.join(",") : "global";
 }
 
 type UseGesturePanelStateOptions = {
@@ -40,6 +55,8 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
 
   const [rules, setRules] = useState<RuleConfig[]>([]);
   const [actions, setActions] = useState<ActionConfig[]>([]);
+  const [frontmostApp, setFrontmostApp] = useState<FrontmostAppInfo | null>(null);
+  const [bindableApps, setBindableApps] = useState<BindableAppInfo[]>([]);
   const [rulesLoading, setRulesLoading] = useState(true);
   const [rulesError, setRulesError] = useState<string | null>(null);
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
@@ -48,6 +65,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
 
   const [draft, setDraft] = useState<CreateRuleDraft>({
     name: "新规则",
+    scopes: [],
     button: "middle",
     gesture: "U",
     actionHotkey: null,
@@ -71,6 +89,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     setEditingRuleId(null);
     setDraft({
       name: "新规则",
+      scopes: [],
       button: "middle",
       gesture: "U",
       actionHotkey: null,
@@ -87,6 +106,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
         (fromAction?.kind === "hotkey" ? actionConfigToHotkeySnapshot(fromAction) : null);
       setDraft({
         name: rule.name,
+        scopes: scopeStringToDraftScopes(rule.scope),
         button: rule.button,
         gesture: rule.gesture,
         actionHotkey: hotkey,
@@ -115,6 +135,12 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
 
   useEffect(() => {
     void refreshRulesAndActions();
+    void invoke<FrontmostAppInfo | null>("get_frontmost_app")
+      .then(setFrontmostApp)
+      .catch(() => setFrontmostApp(null));
+    void invoke<BindableAppInfo[]>("list_bindable_apps")
+      .then(setBindableApps)
+      .catch(() => setBindableApps([]));
 
     const unlistenStart = listen<TrailStartPayload>("trail-start", (e) => {
       setLastResult(null);
@@ -149,7 +175,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
           id: rule.id,
           name: rule.name,
           enabled: rule.enabled,
-          scope: "global",
+          scope: rule.scope,
           button: rule.button,
           gesture: rule.gesture.toUpperCase(),
           actionType: rule.actionType,
@@ -157,7 +183,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
         },
       });
       setRules((prev) =>
-        prev.map((r) => (r.id === rule.id ? { ...rule, gesture: rule.gesture.toUpperCase(), scope: "global" } : r)),
+        prev.map((r) => (r.id === rule.id ? { ...rule, gesture: rule.gesture.toUpperCase() } : r)),
       );
     } catch (err) {
       setRulesError(String(err));
@@ -196,6 +222,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
       }
       const finalPayload: CreateRuleDraft = {
         name: payload?.name?.trim() || draft.name || "新规则",
+        scopes: payload?.scopes ?? draft.scopes,
         button: payload?.button ?? draft.button,
         gesture: (payload?.gesture ?? draft.gesture).toUpperCase(),
         actionHotkey: hotkey,
@@ -207,7 +234,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
         const created = await invoke<RuleConfig>("create_rule", {
           payload: {
             name: finalPayload.name,
-            scope: "global",
+            scope: draftScopesToScopeString(finalPayload.scopes),
             button: finalPayload.button,
             gesture: finalPayload.gesture,
             actionHotkey: finalPayload.actionHotkey,
@@ -222,7 +249,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
         setCreatingRule(false);
       }
     },
-    [draft.actionHotkey, draft.button, draft.gesture, draft.name, closeRuleForm],
+    [draft.actionHotkey, draft.button, draft.gesture, draft.name, draft.scopes, closeRuleForm],
   );
 
   const submitRuleForm = useCallback(async () => {
@@ -236,6 +263,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
       await saveRule({
         ...base,
         name: draft.name.trim() || base.name,
+        scope: draftScopesToScopeString(draft.scopes),
         button: draft.button,
         gesture: draft.gesture.toUpperCase(),
         actionType: INLINE_HOTKEY_ACTION_TYPE,
@@ -294,6 +322,8 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     closeRuleForm,
     submitRuleForm,
     formBusy,
+    frontmostApp,
+    bindableApps,
     lastResult,
     gestureLog: history,
     screens,
