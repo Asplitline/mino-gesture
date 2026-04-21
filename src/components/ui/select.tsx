@@ -59,13 +59,15 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", ...props }, ref) => (
-  <SelectPrimitive.Portal>
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & {
+    container?: HTMLElement | null;
+  }
+>(({ className, children, position = "popper", container, ...props }, ref) => (
+  <SelectPrimitive.Portal container={container ?? undefined}>
     <SelectPrimitive.Content
       ref={ref}
       className={cn(
-        "relative z-50 max-h-[--radix-select-content-available-height] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border border-border bg-[hsl(var(--popover)/0.98)] text-popover-foreground shadow-md backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--popover)/0.92)]",
+        "relative z-[60] max-h-[--radix-select-content-available-height] min-w-[8rem] overflow-y-auto overflow-x-hidden rounded-md border border-border bg-[hsl(var(--popover)/0.98)] text-popover-foreground shadow-md backdrop-blur supports-[backdrop-filter]:bg-[hsl(var(--popover)/0.92)]",
         position === "popper" &&
           "translate-y-1 data-[side=bottom]:translate-y-1 data-[side=top]:-translate-y-1",
         className,

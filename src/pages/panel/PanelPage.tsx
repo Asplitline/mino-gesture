@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BUTTON_OPTIONS,
   formatGestureSelectOption,
@@ -82,6 +82,9 @@ export function PanelPage({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [scopeExpanded, setScopeExpanded] = useState(false);
   const [scopeSearch, setScopeSearch] = useState("");
+  const [ruleFormLayerNode, setRuleFormLayerNode] = useState<HTMLDivElement | null>(
+    null,
+  );
   const [rulePendingDelete, setRulePendingDelete] = useState<RuleConfig | null>(
     null,
   );
@@ -167,10 +170,13 @@ export function PanelPage({
   };
 
   const openEditRuleForm = (rule: RuleConfig) => {
-    setScopeExpanded(rule.scope !== "global");
+    setScopeExpanded(false);
     setScopeSearch("");
     openRuleFormEdit(rule);
   };
+  const handleRuleFormLayerRef = useCallback((node: HTMLDivElement | null) => {
+    setRuleFormLayerNode(node);
+  }, []);
 
   const formatRuleScope = (scope: string) => {
     const scopes = scope
@@ -310,6 +316,7 @@ export function PanelPage({
         onOpenChange={(open) => !open && closeRuleForm()}
       >
         <SheetContent
+          ref={handleRuleFormLayerRef}
           side="right"
           className="flex min-h-0 h-full max-h-none flex-col overflow-hidden rounded-none bg-card p-0 sm:top-3 sm:bottom-3 sm:h-auto sm:max-h-[calc(100vh-1.5rem)] sm:max-w-[440px] sm:rounded-l-[24px]"
         >
@@ -349,7 +356,7 @@ export function PanelPage({
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent container={ruleFormLayerNode}>
                       {BUTTON_OPTIONS.map((opt) => (
                         <SelectItem key={opt.value} value={opt.value}>
                           {opt.label}
@@ -405,7 +412,9 @@ export function PanelPage({
                       <span>
                         <span className="block font-medium">限定 App</span>
                         <span className="mt-0.5 block text-xs text-muted-foreground">
-                          只在选中的应用中触发，适合覆盖应用内快捷键。
+                          {draft.scopes.length > 0
+                            ? `已限定 ${draft.scopes.length} 个 App，展开后可调整。`
+                            : "只在选中的应用中触发，适合覆盖应用内快捷键。"}
                         </span>
                       </span>
                       <span className="shrink-0 text-xs">
@@ -496,7 +505,7 @@ export function PanelPage({
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent container={ruleFormLayerNode}>
                       {GESTURE_OPTIONS.map((g) => (
                         <SelectItem key={g} value={g}>
                           {formatGestureSelectOption(g)}
