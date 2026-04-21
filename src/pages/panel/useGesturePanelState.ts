@@ -62,15 +62,6 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     return Object.fromEntries(actions.map((a) => [a.id, a]));
   }, [actions]);
 
-  const usageByActionId = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const item of history) {
-      if (!item.actionType) continue;
-      counts[item.actionType] = (counts[item.actionType] ?? 0) + 1;
-    }
-    return counts;
-  }, [history]);
-
   const closeRuleForm = useCallback(() => {
     setRuleFormOpen(false);
     setEditingRuleId(null);
@@ -291,13 +282,7 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     onIntentHandled();
   }, [shouldAutoCreateRule, rulesLoading, creatingRule, routeSearch, openRuleFormCreate, onIntentHandled]);
 
-  const filteredRules = useMemo(() => {
-    const sorted = [...rules];
-    sorted.sort(
-      (a, b) => (usageByActionId[b.actionType] ?? 0) - (usageByActionId[a.actionType] ?? 0),
-    );
-    return sorted;
-  }, [rules, usageByActionId]);
+  const filteredRules = rules;
 
   const formBusy = creatingRule || (editingRuleId !== null && savingRuleId === editingRuleId);
 
