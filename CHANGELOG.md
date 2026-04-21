@@ -5,6 +5,17 @@
 
 # 更新日志
 
+## [0.1.6] - 2026-04-21
+
+### 功能
+
+- 无。
+
+### 修复
+
+- 修复规则编辑侧栏中下拉框在模态层内无法选择选项、点击空白无法关闭的问题。
+- 调整下拉弹层挂载容器与层级，避免 `Sheet/Dialog` 与 `Select` 的嵌套交互冲突再次出现。
+
 ## [0.1.5] - 2026-04-21
 
 ### 功能
@@ -70,6 +81,7 @@
 - 无。
 
 [0.1.5]: https://github.com/Asplitline/mino-gesture/releases/tag/v0.1.5
+[0.1.6]: https://github.com/Asplitline/mino-gesture/releases/tag/v0.1.6
 [0.1.4]: https://github.com/Asplitline/mino-gesture/releases/tag/v0.1.4
 [0.1.3]: https://github.com/Asplitline/mino-gesture/releases/tag/v0.1.3
 [0.1.2]: https://github.com/Asplitline/mino-gesture/releases/tag/v0.1.2
