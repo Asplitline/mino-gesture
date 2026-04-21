@@ -6,7 +6,6 @@ import type {
   BindableAppInfo,
   CreateRuleDraft,
   GestureResult,
-  FrontmostAppInfo,
   RuleConfig,
   ScreenInfo,
   ActionHotkeySnapshot,
@@ -55,8 +54,10 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
 
   const [rules, setRules] = useState<RuleConfig[]>([]);
   const [actions, setActions] = useState<ActionConfig[]>([]);
-  const [frontmostApp, setFrontmostApp] = useState<FrontmostAppInfo | null>(null);
   const [bindableApps, setBindableApps] = useState<BindableAppInfo[]>([]);
+  const [bindableAppsLoading, setBindableAppsLoading] = useState(false);
+  const [bindableAppsLoaded, setBindableAppsLoaded] = useState(false);
+  const [bindableAppsError, setBindableAppsError] = useState<string | null>(null);
   const [rulesLoading, setRulesLoading] = useState(true);
   const [rulesError, setRulesError] = useState<string | null>(null);
   const [savingRuleId, setSavingRuleId] = useState<string | null>(null);
@@ -135,12 +136,6 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
 
   useEffect(() => {
     void refreshRulesAndActions();
-    void invoke<FrontmostAppInfo | null>("get_frontmost_app")
-      .then(setFrontmostApp)
-      .catch(() => setFrontmostApp(null));
-    void invoke<BindableAppInfo[]>("list_bindable_apps")
-      .then(setBindableApps)
-      .catch(() => setBindableApps([]));
 
     const unlistenStart = listen<TrailStartPayload>("trail-start", (e) => {
       setLastResult(null);
@@ -161,6 +156,22 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
       unlistenResult.then((fn) => fn());
     };
   }, [refreshRulesAndActions]);
+
+  const loadBindableApps = useCallback(async () => {
+    if (bindableAppsLoaded || bindableAppsLoading) return;
+    setBindableAppsLoading(true);
+    setBindableAppsError(null);
+    try {
+      const next = await invoke<BindableAppInfo[]>("list_bindable_apps");
+      setBindableApps(next);
+      setBindableAppsLoaded(true);
+    } catch (err) {
+      setBindableApps([]);
+      setBindableAppsError(String(err));
+    } finally {
+      setBindableAppsLoading(false);
+    }
+  }, [bindableAppsLoaded, bindableAppsLoading]);
 
   const updateRuleLocal = useCallback((id: string, patch: Partial<RuleConfig>) => {
     setRules((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -322,8 +333,11 @@ export function useGesturePanelState({ routeSearch, onIntentHandled }: UseGestur
     closeRuleForm,
     submitRuleForm,
     formBusy,
-    frontmostApp,
     bindableApps,
+    bindableAppsLoading,
+    bindableAppsLoaded,
+    bindableAppsError,
+    loadBindableApps,
     lastResult,
     gestureLog: history,
     screens,

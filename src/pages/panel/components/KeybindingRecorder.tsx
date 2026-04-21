@@ -189,10 +189,21 @@ export function KeybindingRecorder({ value, onChange, disabled }: KeybindingReco
 
   const comboActive = comboFocused || recordingCombo;
   const mainKeyActive = mainKeyFocused || recordingMain;
+  const comboStatus = value
+    ? "已录制快捷键"
+    : recordingCombo
+      ? "正在录制，按下完整组合键"
+      : "聚焦录制区域后按下快捷键";
 
   return (
     <div className="space-y-3">
       <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-medium text-muted-foreground">快速录制</p>
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            {comboStatus}
+          </p>
+        </div>
         <div
           className={cn(
             "flex overflow-hidden rounded-lg border transition-[border-color,box-shadow]",
@@ -220,7 +231,6 @@ export function KeybindingRecorder({ value, onChange, disabled }: KeybindingReco
           {value && (
             <button
               type="button"
-              tabIndex={-1}
               disabled={disabled}
               aria-label="清除快捷键"
               className={cn(
@@ -239,7 +249,7 @@ export function KeybindingRecorder({ value, onChange, disabled }: KeybindingReco
           )}
         </div>
         <div className="flex items-center justify-between gap-3 text-xs leading-snug">
-          <p className="text-muted-foreground">按一次完整组合键即可；仅支持已映射键位，`Esc` 取消。</p>
+          <p className="text-muted-foreground">推荐直接录制一次完整组合键；Esc 取消当前录制。</p>
           <button
             type="button"
             className="shrink-0 font-medium text-primary transition-colors hover:text-primary/80"
@@ -331,7 +341,6 @@ export function KeybindingRecorder({ value, onChange, disabled }: KeybindingReco
               {preview && (
                 <button
                   type="button"
-                  tabIndex={-1}
                   disabled={disabled}
                   aria-label="清除主键与快捷键"
                   className={cn(

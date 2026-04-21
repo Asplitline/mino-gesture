@@ -43,9 +43,7 @@ export type FrontmostAppInfo = {
   bundleId: string;
 };
 
-export type BindableAppInfo = FrontmostAppInfo & {
-  iconPath?: string | null;
-};
+export type BindableAppInfo = FrontmostAppInfo;
 
 /** 与后端 `ActionHotkeySnapshot` 一致，用于规则内联快捷键 */
 export type ActionHotkeySnapshot = {

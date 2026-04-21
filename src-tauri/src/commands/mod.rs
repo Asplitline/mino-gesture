@@ -10,12 +10,12 @@ use crate::core::state::AppState;
 use crate::domain::gesture::{self, Point};
 use crate::platform::tray;
 use serde::{Deserialize, Serialize};
-use std::collections::{hash_map::DefaultHasher, BTreeMap};
+use serde_json::Value;
+use std::collections::BTreeMap;
 use std::fs;
-use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, State};
 
@@ -85,13 +85,14 @@ pub struct FrontmostAppResponse {
     pub bundle_id: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BindableAppResponse {
     pub name: String,
     pub bundle_id: String,
-    pub icon_path: Option<String>,
 }
+
+static BINDABLE_APPS_CACHE: OnceLock<Mutex<Option<Vec<BindableAppResponse>>>> = OnceLock::new();
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -205,11 +206,19 @@ end tell"#;
     }
 }
 
-fn plutil_extract_raw(info_plist: &Path, key: &str) -> Option<String> {
+fn plist_string(value: &Value, key: &str) -> Option<String> {
+    value
+        .get(key)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && *value != "missing value")
+        .map(str::to_string)
+}
+
+fn read_info_plist_json(info_plist: &Path) -> Option<Value> {
     let output = Command::new("plutil")
-        .arg("-extract")
-        .arg(key)
-        .arg("raw")
+        .arg("-convert")
+        .arg("json")
         .arg("-o")
         .arg("-")
         .arg(info_plist)
@@ -218,53 +227,24 @@ fn plutil_extract_raw(info_plist: &Path, key: &str) -> Option<String> {
     if !output.status.success() {
         return None;
     }
-    let value = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if value.is_empty() || value == "missing value" {
-        None
-    } else {
-        Some(value)
-    }
+    serde_json::from_slice(&output.stdout).ok()
 }
 
-fn app_icon_source_path(app_path: &Path, info_plist: &Path) -> Option<PathBuf> {
-    let icon_file = plutil_extract_raw(info_plist, "CFBundleIconFile")?;
-    let icon_file = if Path::new(&icon_file).extension().is_some() {
-        icon_file
-    } else {
-        format!("{icon_file}.icns")
-    };
-    let icon_path = app_path.join("Contents").join("Resources").join(icon_file);
-    icon_path.exists().then_some(icon_path)
+fn is_helper_bundle(path: &Path, name: &str, bundle_id: &str) -> bool {
+    let path_text = path.to_string_lossy();
+    name.contains(" Helper")
+        || bundle_id.to_ascii_lowercase().contains(".helper")
+        || path_text.contains("/Contents/Frameworks/")
+        || path_text.contains("/Contents/PlugIns/")
+        || path_text.contains("/Contents/Helpers/")
 }
 
-fn cached_png_icon_path(icon_path: &Path, bundle_id: &str) -> Option<String> {
-    let mut hasher = DefaultHasher::new();
-    icon_path.hash(&mut hasher);
-    bundle_id.hash(&mut hasher);
-    let cache_dir = std::env::temp_dir().join("mino-gesture").join("app-icons");
-    fs::create_dir_all(&cache_dir).ok()?;
-    let output_path = cache_dir.join(format!("{:x}.png", hasher.finish()));
-    if output_path.exists() {
-        return Some(output_path.display().to_string());
-    }
-
-    let status = Command::new("sips")
-        .arg("-s")
-        .arg("format")
-        .arg("png")
-        .arg(icon_path)
-        .arg("--out")
-        .arg(&output_path)
-        .status()
-        .ok()?;
-    if status.success() && output_path.exists() {
-        Some(output_path.display().to_string())
-    } else {
-        None
-    }
-}
-
-fn collect_apps_from_dir(dir: &Path, apps: &mut BTreeMap<String, BindableAppResponse>) {
+fn collect_apps_from_dir(
+    dir: &Path,
+    apps: &mut BTreeMap<String, BindableAppResponse>,
+    depth: usize,
+    max_depth: usize,
+) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
     };
@@ -278,37 +258,60 @@ fn collect_apps_from_dir(dir: &Path, apps: &mut BTreeMap<String, BindableAppResp
 
         if is_app {
             let info_plist = path.join("Contents").join("Info.plist");
-            let Some(bundle_id) = plutil_extract_raw(&info_plist, "CFBundleIdentifier") else {
+            let Some(info) = read_info_plist_json(&info_plist) else {
                 continue;
             };
-            let name = plutil_extract_raw(&info_plist, "CFBundleDisplayName")
-                .or_else(|| plutil_extract_raw(&info_plist, "CFBundleName"))
-                .or_else(|| path.file_stem().and_then(|stem| stem.to_str()).map(str::to_string))
+            let Some(bundle_id) = plist_string(&info, "CFBundleIdentifier") else {
+                continue;
+            };
+            let name = plist_string(&info, "CFBundleDisplayName")
+                .or_else(|| plist_string(&info, "CFBundleName"))
+                .or_else(|| {
+                    path.file_stem()
+                        .and_then(|stem| stem.to_str())
+                        .map(str::to_string)
+                })
                 .unwrap_or_else(|| bundle_id.clone());
-            let icon_path = app_icon_source_path(&path, &info_plist)
-                .and_then(|icon_path| cached_png_icon_path(&icon_path, &bundle_id));
+            if is_helper_bundle(&path, &name, &bundle_id) {
+                continue;
+            }
             apps.entry(bundle_id.clone())
                 .or_insert(BindableAppResponse {
                     name,
                     bundle_id,
-                    icon_path,
                 });
-        } else if path.is_dir() {
-            collect_apps_from_dir(&path, apps);
+        } else if path.is_dir() && depth < max_depth {
+            collect_apps_from_dir(&path, apps, depth + 1, max_depth);
         }
     }
 }
 
-fn list_bindable_apps_info() -> Vec<BindableAppResponse> {
+fn scan_bindable_apps_info() -> Vec<BindableAppResponse> {
     let mut apps = BTreeMap::new();
-    collect_apps_from_dir(Path::new("/Applications"), &mut apps);
-    collect_apps_from_dir(Path::new("/System/Applications"), &mut apps);
+    collect_apps_from_dir(Path::new("/Applications"), &mut apps, 0, 2);
+    collect_apps_from_dir(Path::new("/System/Applications"), &mut apps, 0, 1);
     if let Some(home) = std::env::var_os("HOME") {
-        collect_apps_from_dir(&PathBuf::from(home).join("Applications"), &mut apps);
+        collect_apps_from_dir(&PathBuf::from(home).join("Applications"), &mut apps, 0, 2);
     }
 
     let mut apps: Vec<_> = apps.into_values().collect();
     apps.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    apps
+}
+
+fn list_bindable_apps_info() -> Vec<BindableAppResponse> {
+    let cache = BINDABLE_APPS_CACHE.get_or_init(|| Mutex::new(None));
+    let mut guard = match cache.lock() {
+        Ok(guard) => guard,
+        Err(_) => return scan_bindable_apps_info(),
+    };
+
+    if let Some(apps) = guard.as_ref() {
+        return apps.clone();
+    }
+
+    let apps = scan_bindable_apps_info();
+    *guard = Some(apps.clone());
     apps
 }
 

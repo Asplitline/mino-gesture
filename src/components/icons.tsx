@@ -12,4 +12,5 @@ export {
   RefreshCcw as IconRefreshCcw,
   ExternalLink as IconExternalLink,
   Info as IconInfo,
+  Search as IconSearch,
 } from "lucide-react";
